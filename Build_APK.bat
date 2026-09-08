@@ -3,6 +3,9 @@ setlocal
 title Sabre Training Simulator - Build APK
 cd /d "%~dp0"
 
+if not defined ANDROID_HOME if exist "%LOCALAPPDATA%\Android\Sdk" set "ANDROID_HOME=%LOCALAPPDATA%\Android\Sdk"
+if not defined ANDROID_SDK_ROOT if defined ANDROID_HOME set "ANDROID_SDK_ROOT=%ANDROID_HOME%"
+
 echo ============================================
 echo   Sabre Training Simulator - APK Builder
 echo ============================================
@@ -17,7 +20,18 @@ echo.
 
 echo [2/3] Building release APK with Gradle...
 cd android
-call gradlew.bat assembleRelease
+if exist "gradlew.bat" (
+    call gradlew.bat assembleRelease
+) else if exist "%ANDROID_HOME%\platform-tools\adb.exe" where gradle >nul 2>&1 (
+    call gradle assembleRelease
+) else (
+    echo     Gradle wrapper or Gradle command was not found.
+    echo     Open the android folder in Android Studio and sync the project first,
+    echo     or install Gradle and add it to PATH, then run this file again.
+    cd ..
+    pause
+    exit /b 1
+)
 if errorlevel 1 (
     echo.
     echo Build FAILED. See the Gradle output above.

@@ -34,6 +34,7 @@ sabre/
 ├── main.js                        # Electron main process
 ├── package.json                   # Electron/electron-builder কনফিগ
 ├── Start_Desktop.bat              # ডেস্কটপ লঞ্চার (npm install অটো-চেক)
+├── Start.bat                      # এক-ক্লিক ডেস্কটপ স্টার্টার
 ├── Admin_License_Generator.html   # অফলাইন লাইসেন্স কী জেনারেটর
 ├── Generate_License.bat           # লঞ্চার
 ├── SABRE_COMMANDS_CHEATSHEET.md   # কমান্ড রেফারেন্স
@@ -58,7 +59,7 @@ cd sabre
 npm install
 npm start
 ```
-অথবা `Start_Desktop.bat` ডাবল-ক্লিক করুন — প্রথমবার `node_modules` না থাকলে অটোমেটিক `npm install` চালাবে, তারপর অ্যাপ লঞ্চ করবে।
+অথবা `Start.bat` ডাবল-ক্লিক করুন — এটি প্রয়োজন হলে `npm install` চালিয়ে Electron ডেস্কটপ অ্যাপ খুলবে। সরাসরি `Start_Desktop.bat`-ও ব্যবহার করা যায়।
 
 **ইনস্টলার/পোর্টেবল বিল্ড বানাতে:**
 ```

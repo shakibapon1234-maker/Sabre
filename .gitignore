@@ -1,0 +1,16 @@
+# Dependencies and desktop build output
+node_modules/
+dist/
+
+# Android/Gradle generated files
+android/.gradle/
+android/build/
+android/app/build/
+
+# Android Studio project metadata
+.idea/
+*.iml
+
+# Local OS/editor files
+.DS_Store
+Thumbs.db

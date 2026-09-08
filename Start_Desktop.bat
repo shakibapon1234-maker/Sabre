@@ -12,12 +12,18 @@ cd /d "%~dp0"
 REM Check if node_modules/electron exists
 if not exist "node_modules\electron\dist\electron.exe" (
     echo [SETUP] Electron not found. Installing dependencies...
-    call npm install --prefer-offline --no-audit --no-fund
+    call npm.cmd install --prefer-offline --no-audit --no-fund
     if errorlevel 1 (
         echo [ERROR] npm install failed. Please run: npm install
         pause
         exit /b 1
     )
+)
+
+if not exist "node_modules\electron\dist\electron.exe" (
+    echo [ERROR] Electron was not installed successfully.
+    pause
+    exit /b 1
 )
 
 echo.
