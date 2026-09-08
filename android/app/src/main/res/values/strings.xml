@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Sabre Training Simulator</string>
+    <string name="license_prompt">Enter your license key to begin</string>
+    <string name="license_activate_button">ACTIVATE</string>
+
+    <string name="license_status_not_activated">This device is not yet activated.</string>
+    <string name="license_status_expired">Your license has expired. Contact your administrator for renewal.</string>
+    <string name="license_status_wrong_device">This key is already activated on a different device.</string>
+    <string name="license_status_tampered">License data could not be verified on this device.</string>
+    <string name="license_status_invalid">Invalid license key. Check the code and try again.</string>
+
+    <string name="license_toast_invalid">Key format not recognized.</string>
+    <string name="license_toast_activated">License activated.</string>
+</resources>

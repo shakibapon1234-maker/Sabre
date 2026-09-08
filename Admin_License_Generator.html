@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Sabre Training Simulator — Admin License Generator</title>
+<style>
+  :root {
+    --navy: #141a24;
+    --navy2: #1e2733;
+    --teal: #4fd1c5;
+    --text: #e6edf3;
+    --muted: #8a99a8;
+    --amber: #e0a030;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: 'Segoe UI', Arial, sans-serif;
+    background: var(--navy);
+    color: var(--text);
+    display: flex;
+    justify-content: center;
+    padding: 40px 20px;
+  }
+  .card {
+    background: var(--navy2);
+    border: 1px solid #2a3644;
+    border-radius: 8px;
+    padding: 32px;
+    width: 100%;
+    max-width: 560px;
+  }
+  h1 {
+    color: var(--teal);
+    font-size: 20px;
+    margin: 0 0 4px;
+  }
+  p.sub {
+    color: var(--muted);
+    font-size: 13px;
+    margin: 0 0 24px;
+  }
+  label {
+    display: block;
+    font-size: 12px;
+    color: var(--muted);
+    margin-bottom: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  input[type=text], input[type=number] {
+    width: 100%;
+    background: var(--navy);
+    border: 1px solid #2a3644;
+    color: var(--text);
+    padding: 10px 12px;
+    border-radius: 4px;
+    font-size: 14px;
+    margin-bottom: 18px;
+  }
+  button {
+    background: var(--teal);
+    color: var(--navy);
+    border: none;
+    font-weight: bold;
+    padding: 12px 24px;
+    border-radius: 4px;
+    font-size: 14px;
+    cursor: pointer;
+  }
+  button:hover { opacity: 0.9; }
+  .result {
+    margin-top: 24px;
+    padding: 16px;
+    background: var(--navy);
+    border: 1px solid var(--teal);
+    border-radius: 4px;
+    display: none;
+  }
+  .result.show { display: block; }
+  .key-output {
+    font-size: 22px;
+    letter-spacing: 2px;
+    font-family: 'Consolas', monospace;
+    color: var(--teal);
+    word-break: break-all;
+  }
+  .meta { color: var(--muted); font-size: 12px; margin-top: 8px; }
+  .warn {
+    margin-top: 20px;
+    font-size: 12px;
+    color: var(--amber);
+    border-left: 3px solid var(--amber);
+    padding-left: 10px;
+  }
+  .history { margin-top: 20px; }
+  .history-item {
+    font-family: 'Consolas', monospace;
+    font-size: 13px;
+    padding: 6px 0;
+    border-bottom: 1px solid #2a3644;
+    color: var(--text);
+  }
+</style>
+</head>
+<body>
+<div class="card">
+  <h1>Sabre Training Simulator</h1>
+  <p class="sub">Admin License Generator — offline, client-side only. Nothing here is sent over the network.</p>
+
+  <label for="qty">Number of keys to generate</label>
+  <input type="number" id="qty" value="1" min="1" max="50">
+
+  <label for="note">Batch note (optional, for your own reference — not stored in the key)</label>
+  <input type="text" id="note" placeholder="e.g. Cohort 2026-B">
+
+  <button onclick="generateKeys()">GENERATE LICENSE KEY(S)</button>
+
+  <div class="result" id="result">
+    <div id="keyList"></div>
+    <div class="meta">Each key is valid for 730 days from the date it is <em>activated</em> on a device (not from generation), and is locked to the first device that activates it.</div>
+  </div>
+
+  <div class="warn">
+    This page must use the same MASTER_SECRET string as <code>LicenseManager.java</code> in the Android app.
+    If you change one, you must change the other and rebuild the app, or previously generated keys will
+    stop validating.
+  </div>
+</div>
+
+<script>
+// Must match MASTER_SECRET in android/app/src/main/java/com/sabre/training/LicenseManager.java
+const MASTER_SECRET = "SBR-TRAIN-9f2b7c14-e6a0-4d3b-Wings-Fly-Aviation-2026";
+
+// Unambiguous alphabet: no 0/O, 1/I confusion
+const ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+
+async function sha256Hex(message) {
+  const enc = new TextEncoder().encode(message);
+  const hashBuffer = await crypto.subtle.digest("SHA-256", enc);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, "0")).join("");
+}
+
+function randomGroup(len) {
+  let out = "";
+  const arr = new Uint32Array(len);
+  crypto.getRandomValues(arr);
+  for (let i = 0; i < len; i++) {
+    out += ALPHABET[arr[i] % ALPHABET.length];
+  }
+  return out;
+}
+
+async function generateOneKey() {
+  const groupA = randomGroup(4);
+  const groupB = randomGroup(4);
+  const digest = await sha256Hex(MASTER_SECRET + groupA + groupB);
+  const checksum = digest.substring(0, 4).toUpperCase();
+  return `SBR-${groupA}-${groupB}-${checksum}`;
+}
+
+async function generateKeys() {
+  const qty = Math.max(1, Math.min(50, parseInt(document.getElementById("qty").value) || 1));
+  const listEl = document.getElementById("keyList");
+  listEl.innerHTML = "";
+
+  for (let i = 0; i < qty; i++) {
+    const key = await generateOneKey();
+    const div = document.createElement("div");
+    div.className = qty === 1 ? "key-output" : "history-item";
+    div.textContent = key;
+    listEl.appendChild(div);
+  }
+
+  document.getElementById("result").classList.add("show");
+}
+</script>
+</body>
+</html>
