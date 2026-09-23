@@ -63,20 +63,47 @@ function sbUseHelpCmd(cmd) {
   sbCloseCommandHelper();
 }
 
+let sbSelectedHistoryIndex = -1;
+function sbOpenHistory() {
+  const modal = document.getElementById('sbHistoryModal');
+  const list = document.getElementById('sbHistoryList');
+  if (!modal || !list) return;
+  const entries = sbCommandHistory.slice().reverse();
+  sbSelectedHistoryIndex = entries.length ? 0 : -1;
+  list.innerHTML = entries.length
+    ? entries.map((command, index) => `<button type="button" class="sb-history-row${index === 0 ? ' selected' : ''}" data-index="${index}"><span>⌨</span>${command}</button>`).join('')
+    : '<div class="sb-history-empty">NO COMMAND HISTORY</div>';
+  list.querySelectorAll('.sb-history-row').forEach(row => row.addEventListener('click', () => {
+    sbSelectedHistoryIndex = Number(row.dataset.index);
+    list.querySelectorAll('.sb-history-row').forEach(item => item.classList.remove('selected'));
+    row.classList.add('selected');
+  }));
+  modal.classList.add('open');
+}
+function sbCloseHistory() { document.getElementById('sbHistoryModal')?.classList.remove('open'); }
+function sbUseHistory(sendNow) {
+  const entries = sbCommandHistory.slice().reverse();
+  const command = entries[sbSelectedHistoryIndex];
+  if (!command) return;
+  const input = document.getElementById('cmdInput');
+  input.value = command;
+  sbCloseHistory();
+  if (sendNow) sendCmd(); else input.focus();
+}
+
 document.getElementById('cmdInput').addEventListener('keydown', e => {
   if (e.key === 'Enter') sendCmd();
-  if (e.ctrlKey && e.key === 'ArrowUp') { e.preventDefault(); sbRecallHistory(-1); }
-  if (e.ctrlKey && e.key === 'ArrowDown') { e.preventDefault(); sbRecallHistory(1); }
+  if (e.altKey && e.key === 'ArrowUp') { e.preventDefault(); sbRecallHistory(-1); }
+  if (e.altKey && e.key === 'ArrowDown') { e.preventDefault(); sbRecallHistory(1); }
 });
 document.getElementById('cmdInput').addEventListener('input', e => {
   e.target.value = e.target.value.toUpperCase();
 });
-document.getElementById('historyBtn').addEventListener('click', () => sbRecallHistory(-1));
+document.getElementById('historyBtn').addEventListener('click', sbOpenHistory);
 
-// Electron/browser menus can intercept Ctrl+Arrow before the input receives
-// it, so capture it at window level as well.
+// Capture the Sabre-style Alt+Arrow recall shortcut at window level too.
 window.addEventListener('keydown', e => {
-  if (!e.ctrlKey) return;
+  if (!e.altKey) return;
   if (e.key === 'ArrowUp') { e.preventDefault(); sbRecallHistory(-1); }
   if (e.key === 'ArrowDown') { e.preventDefault(); sbRecallHistory(1); }
 }, true);

@@ -33,7 +33,7 @@ let sbCommandHistory = [];
 let sbHistoryIndex = -1;
 
 function sbRememberCommand(command) {
-  if (sbCommandHistory.at(-1) !== command) sbCommandHistory.push(command);
+  sbCommandHistory.push(command);
   sbHistoryIndex = sbCommandHistory.length;
 }
 

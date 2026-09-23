@@ -385,6 +385,16 @@
     padding:10px 18px;border-top:1px solid var(--panel-border);
     color:var(--text-faint);font-size:11px;
   }
+  .sb-history-modal{width:600px;max-width:92vw;max-height:76vh;background:#f6f6f6;color:#24272b;border-radius:5px;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 12px 40px rgba(0,0,0,.45);}
+  .sb-history-title{text-align:center;font-size:21px;padding:16px;border-bottom:1px solid #c9c9c9;}
+  .sb-history-list{overflow-y:auto;min-height:160px;max-height:52vh;}
+  .sb-history-row{display:flex;align-items:center;gap:12px;width:100%;border:0;border-bottom:1px solid #d1d1d1;background:transparent;color:#25272b;padding:12px 28px;font-family:var(--font-mono);font-size:16px;text-align:left;cursor:pointer;}
+  .sb-history-row:hover,.sb-history-row.selected{background:#e2e7eb;}
+  .sb-history-row span{font-family:var(--font-ui);}
+  .sb-history-empty{padding:28px;text-align:center;color:#6d747b;}
+  .sb-history-actions{display:flex;justify-content:center;gap:26px;padding:14px;border-top:1px solid #c9c9c9;}
+  .sb-history-actions button{min-width:190px;padding:12px;border:2px solid #252525;border-radius:4px;background:#fff;color:#252525;font-size:16px;font-weight:700;cursor:pointer;}
+  .sb-history-actions button:last-child{background:#202020;color:#fff;}
 </style>
 </head>
 <body>
@@ -469,6 +479,18 @@
 
   <div class="app-footer">
     স্বাধীন এডুকেশনাল ট্রেনিং টুল — Sabre Corporation-এর সাথে কোনো অ্যাফিলিয়েশন নেই। কোনো লাইভ GDS-এর সাথে কানেক্টেড না। · Wings Fly Aviation Academy
+  </div>
+
+  <!-- Command history modal -->
+  <div class="sb-help-overlay" id="sbHistoryModal" onclick="if(event.target===this) sbCloseHistory()">
+    <div class="sb-history-modal">
+      <div class="sb-history-title">History</div>
+      <div class="sb-history-list" id="sbHistoryList"></div>
+      <div class="sb-history-actions">
+        <button type="button" onclick="sbUseHistory(true)">Send</button>
+        <button type="button" onclick="sbUseHistory(false)">Modify</button>
+      </div>
+    </div>
   </div>
 
   <!-- Command Helper modal -->
