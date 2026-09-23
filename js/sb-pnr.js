@@ -121,10 +121,10 @@ function sbRenderAvailabilityBoard(options, date) {
     const row = document.createElement('div');
     row.className = 'sb-avail-row';
     row.innerHTML = `
-      <span class="sb-avail-num">${line}</span><span class="sb-avail-air">${isConnection ? `${leg.al}/${finalLeg.al}` : leg.al}</span><span class="sb-avail-flight">${leg.fn}</span>
+      <span class="sb-avail-num">${line}</span><span class="sb-avail-air">${leg.al}</span><span class="sb-avail-flight">${leg.fn}</span>
       <span class="sb-avail-classes"></span><span class="sb-avail-route">${leg.dep}&nbsp;&nbsp;${leg.arr}</span>
       <span class="sb-avail-time">${leg.depT}&nbsp;&nbsp;${leg.arrT}${leg.dayOver ? ` +${leg.dayOver}` : ''}</span>
-      <span class="sb-avail-eq">${leg.eq}${isConnection ? `<small>VIA ${leg.arr}</small>` : ''}</span><button class="sb-avail-arrow" type="button" aria-label="Open seat hold">⌄</button>`;
+      <span class="sb-avail-eq">${leg.eq}</span><button class="sb-avail-arrow" type="button" aria-label="Open seat hold">⌄</button>`;
     const classBox = row.querySelector('.sb-avail-classes');
     classes.forEach(bucket => {
       const button = document.createElement('button');
@@ -150,7 +150,29 @@ function sbRenderAvailabilityBoard(options, date) {
     });
     detail.querySelector('.sb-hold-close').addEventListener('click', () => detail.classList.remove('open'));
     row.querySelector('.sb-avail-arrow').addEventListener('click', () => sbOpenSeatHold(line, classes.find(c => c.startsWith('Y'))?.charAt(0) || classes[0].charAt(0), detail));
-    board.append(row, detail);
+    board.appendChild(row);
+    if (isConnection) {
+      const onwardClasses = finalLeg.cls.split(' ');
+      const onward = document.createElement('div');
+      onward.className = 'sb-avail-row sb-onward-leg';
+      onward.innerHTML = `
+        <span class="sb-avail-num">↳</span><span class="sb-avail-air">${finalLeg.al}</span><span class="sb-avail-flight">${finalLeg.fn}</span>
+        <span class="sb-avail-classes"></span><span class="sb-avail-route">${finalLeg.dep}&nbsp;&nbsp;${finalLeg.arr}</span>
+        <span class="sb-avail-time">${finalLeg.depT}&nbsp;&nbsp;${finalLeg.arrT}${finalLeg.dayOver ? ` +${finalLeg.dayOver}` : ''}</span>
+        <span class="sb-avail-eq">${finalLeg.eq}</span><button class="sb-avail-arrow" type="button" aria-label="Open seat hold">⌄</button>`;
+      const onwardBox = onward.querySelector('.sb-avail-classes');
+      onwardClasses.forEach(bucket => {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'sb-class-bucket';
+        button.textContent = bucket;
+        button.addEventListener('click', () => sbOpenSeatHold(line, bucket.charAt(0), detail));
+        onwardBox.appendChild(button);
+      });
+      onward.querySelector('.sb-avail-arrow').addEventListener('click', () => sbOpenSeatHold(line, onwardClasses.find(c => c.startsWith('Y'))?.charAt(0) || onwardClasses[0].charAt(0), detail));
+      board.appendChild(onward);
+    }
+    board.appendChild(detail);
   });
   term.appendChild(board);
   term.scrollTop = term.scrollHeight;

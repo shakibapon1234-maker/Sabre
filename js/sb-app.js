@@ -68,6 +68,9 @@ document.getElementById('cmdInput').addEventListener('keydown', e => {
   if (e.ctrlKey && e.key === 'ArrowUp') { e.preventDefault(); sbRecallHistory(-1); }
   if (e.ctrlKey && e.key === 'ArrowDown') { e.preventDefault(); sbRecallHistory(1); }
 });
+document.getElementById('cmdInput').addEventListener('input', e => {
+  e.target.value = e.target.value.toUpperCase();
+});
 document.getElementById('historyBtn').addEventListener('click', () => sbRecallHistory(-1));
 
 // Electron/browser menus can intercept Ctrl+Arrow before the input receives
