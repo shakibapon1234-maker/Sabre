@@ -79,6 +79,76 @@ const SB_AIRPORTS = {
   YYZ: { name: "TORONTO PEARSON INTL", city: "TORONTO", country: "CANADA", region: "NA" }
 };
 
+// Extra training locations mirrored from the completed Galileo catalogue.
+// They keep the same regional routing rules used by the availability engine.
+Object.assign(SB_AIRPORTS, {
+  SPD: { name: "SAIDPUR AIRPORT", city: "SAIDPUR", country: "BANGLADESH", region: "BD" },
+  PEN: { name: "PENANG INTL", city: "PENANG", country: "MALAYSIA", region: "SEASIA" },
+  HAN: { name: "NOI BAI INTL", city: "HANOI", country: "VIETNAM", region: "SEASIA" },
+  KIX: { name: "KANSAI INTL", city: "OSAKA", country: "JAPAN", region: "EASIA" },
+  PKX: { name: "DAXING INTL", city: "BEIJING", country: "CHINA", region: "EASIA" },
+  BHX: { name: "BIRMINGHAM AIRPORT", city: "BIRMINGHAM", country: "UK", region: "EUROPE" },
+  SAW: { name: "SABIHA GOKCEN INTL", city: "ISTANBUL", country: "TURKEY", region: "MENA" },
+  SFO: { name: "SAN FRANCISCO INTL", city: "SAN FRANCISCO", country: "USA", region: "NA" },
+  DFW: { name: "DALLAS/FORT WORTH INTL", city: "DALLAS", country: "USA", region: "NA" },
+  IAH: { name: "GEORGE BUSH INTERCONTINENTAL", city: "HOUSTON", country: "USA", region: "NA" },
+  MIA: { name: "MIAMI INTL", city: "MIAMI", country: "USA", region: "NA" },
+  BOS: { name: "LOGAN INTL", city: "BOSTON", country: "USA", region: "NA" },
+  ATL: { name: "HARTSFIELD-JACKSON INTL", city: "ATLANTA", country: "USA", region: "NA" },
+  SEA: { name: "SEATTLE-TACOMA INTL", city: "SEATTLE", country: "USA", region: "NA" },
+  YVR: { name: "VANCOUVER INTL", city: "VANCOUVER", country: "CANADA", region: "NA" },
+  YUL: { name: "PIERRE ELLIOTT TRUDEAU", city: "MONTREAL", country: "CANADA", region: "NA" },
+  SYD: { name: "KINGSFORD SMITH INTL", city: "SYDNEY", country: "AUSTRALIA", region: "OCEANIA" },
+  MEL: { name: "MELBOURNE AIRPORT", city: "MELBOURNE", country: "AUSTRALIA", region: "OCEANIA" },
+  BNE: { name: "BRISBANE AIRPORT", city: "BRISBANE", country: "AUSTRALIA", region: "OCEANIA" },
+  PER: { name: "PERTH AIRPORT", city: "PERTH", country: "AUSTRALIA", region: "OCEANIA" },
+  AKL: { name: "AUCKLAND AIRPORT", city: "AUCKLAND", country: "NEW ZEALAND", region: "OCEANIA" },
+  HYD: { name: "RAJIV GANDHI INTL", city: "HYDERABAD", country: "INDIA", region: "SASIA" },
+  MLE: { name: "VELANA INTL", city: "MALE", country: "MALDIVES", region: "SASIA" },
+  PBH: { name: "PARO INTL", city: "PARO", country: "BHUTAN", region: "SASIA" },
+  ISB: { name: "ISLAMABAD INTL", city: "ISLAMABAD", country: "PAKISTAN", region: "SASIA" },
+  LHE: { name: "ALLAMA IQBAL INTL", city: "LAHORE", country: "PAKISTAN", region: "SASIA" },
+  MUX: { name: "MULTAN INTL", city: "MULTAN", country: "PAKISTAN", region: "SASIA" }
+  ,CAI: { name: "CAIRO INTL", city: "CAIRO", country: "EGYPT", region: "AFRICA" }
+  ,AMM: { name: "QUEEN ALIA INTL", city: "AMMAN", country: "JORDAN", region: "MENA" }
+  ,BEY: { name: "BEIRUT-RAFIC HARIRI INTL", city: "BEIRUT", country: "LEBANON", region: "MENA" }
+  ,TLV: { name: "BEN GURION INTL", city: "TEL AVIV", country: "ISRAEL", region: "MENA" }
+  ,NBO: { name: "JOMO KENYATTA INTL", city: "NAIROBI", country: "KENYA", region: "AFRICA" }
+  ,DAR: { name: "JULIUS NYERERE INTL", city: "DAR ES SALAAM", country: "TANZANIA", region: "AFRICA" }
+  ,JNB: { name: "O R TAMBO INTL", city: "JOHANNESBURG", country: "SOUTH AFRICA", region: "AFRICA" }
+  ,MRU: { name: "SIR SEEWOOSAGUR RAMGOOLAM INTL", city: "MAURITIUS", country: "MAURITIUS", region: "AFRICA" }
+  ,SEZ: { name: "SEYCHELLES INTL", city: "MAHE", country: "SEYCHELLES", region: "AFRICA" }
+  ,ZRH: { name: "ZURICH AIRPORT", city: "ZURICH", country: "SWITZERLAND", region: "EUROPE" }
+  ,VIE: { name: "VIENNA INTL", city: "VIENNA", country: "AUSTRIA", region: "EUROPE" }
+  ,BRU: { name: "BRUSSELS AIRPORT", city: "BRUSSELS", country: "BELGIUM", region: "EUROPE" }
+  ,MAD: { name: "ADOLFO SUAREZ MADRID-BARAJAS", city: "MADRID", country: "SPAIN", region: "EUROPE" }
+  ,BCN: { name: "BARCELONA-EL PRAT", city: "BARCELONA", country: "SPAIN", region: "EUROPE" }
+  ,LIS: { name: "HUMBERTO DELGADO AIRPORT", city: "LISBON", country: "PORTUGAL", region: "EUROPE" }
+  ,DUB: { name: "DUBLIN AIRPORT", city: "DUBLIN", country: "IRELAND", region: "EUROPE" }
+  ,CPH: { name: "COPENHAGEN AIRPORT", city: "COPENHAGEN", country: "DENMARK", region: "EUROPE" }
+  ,ARN: { name: "STOCKHOLM ARLANDA", city: "STOCKHOLM", country: "SWEDEN", region: "EUROPE" }
+  ,OSL: { name: "OSLO GARDERMOEN", city: "OSLO", country: "NORWAY", region: "EUROPE" }
+  ,ATH: { name: "ATHENS INTL", city: "ATHENS", country: "GREECE", region: "EUROPE" }
+  ,WAW: { name: "WARSAW CHOPIN", city: "WARSAW", country: "POLAND", region: "EUROPE" }
+  ,PRG: { name: "VACLV HAVEL PRAGUE", city: "PRAGUE", country: "CZECH REPUBLIC", region: "EUROPE" }
+  ,BUD: { name: "BUDAPEST FERENC LISZT", city: "BUDAPEST", country: "HUNGARY", region: "EUROPE" }
+  ,SVO: { name: "SHEREMETYEVO INTL", city: "MOSCOW", country: "RUSSIA", region: "EUROPE" }
+  ,GRU: { name: "SAO PAULO-GUARULHOS", city: "SAO PAULO", country: "BRAZIL", region: "LATAM" }
+  ,MEX: { name: "MEXICO CITY INTL", city: "MEXICO CITY", country: "MEXICO", region: "LATAM" }
+  ,EZE: { name: "MINISTRO PISTARINI INTL", city: "BUENOS AIRES", country: "ARGENTINA", region: "LATAM" }
+  ,SCL: { name: "ARTURO MERINO BENITEZ", city: "SANTIAGO", country: "CHILE", region: "LATAM" }
+  ,BOG: { name: "EL DORADO INTL", city: "BOGOTA", country: "COLOMBIA", region: "LATAM" }
+  ,SJO: { name: "JUAN SANTAMARIA INTL", city: "SAN JOSE", country: "COSTA RICA", region: "LATAM" }
+  ,ZAG: { name: "FRANJO TUDJMAN AIRPORT", city: "ZAGREB", country: "CROATIA", region: "EUROPE" }
+  ,LCA: { name: "LARNACA INTL", city: "LARNACA", country: "CYPRUS", region: "EUROPE" }
+  ,HEL: { name: "HELSINKI AIRPORT", city: "HELSINKI", country: "FINLAND", region: "EUROPE" }
+});
+
+// ISO country codes shown by W/-COUNTRIES in the training terminal.
+const SB_COUNTRY_CODES = {
+  AU: "AUSTRALIA", AT: "AUSTRIA", BH: "BAHRAIN", BD: "BANGLADESH", BE: "BELGIUM", BT: "BHUTAN", BR: "BRAZIL", CA: "CANADA", CL: "CHILE", CN: "CHINA", CO: "COLOMBIA", CR: "COSTA RICA", HR: "CROATIA", CY: "CYPRUS", CZ: "CZECH REPUBLIC", DK: "DENMARK", EG: "EGYPT", FI: "FINLAND", FR: "FRANCE", DE: "GERMANY", GR: "GREECE", HK: "HONG KONG", HU: "HUNGARY", IN: "INDIA", ID: "INDONESIA", IE: "IRELAND", IL: "ISRAEL", IT: "ITALY", JP: "JAPAN", JO: "JORDAN", KE: "KENYA", KW: "KUWAIT", LB: "LEBANON", MY: "MALAYSIA", MV: "MALDIVES", MU: "MAURITIUS", MX: "MEXICO", NP: "NEPAL", NL: "NETHERLANDS", NZ: "NEW ZEALAND", NO: "NORWAY", OM: "OMAN", PK: "PAKISTAN", PH: "PHILIPPINES", PL: "POLAND", PT: "PORTUGAL", QA: "QATAR", RU: "RUSSIA", SA: "SAUDI ARABIA", SC: "SEYCHELLES", SG: "SINGAPORE", ZA: "SOUTH AFRICA", KR: "SOUTH KOREA", ES: "SPAIN", LK: "SRI LANKA", SE: "SWEDEN", CH: "SWITZERLAND", TW: "TAIWAN", TZ: "TANZANIA", TH: "THAILAND", TR: "TURKEY", AE: "UAE", GB: "UK", US: "USA", VN: "VIETNAM"
+};
+
 const SB_AIRLINES = {
   BG: { name: "BIMAN BANGLADESH AIRLINES", region: "BD" },
   BS: { name: "US-BANGLA AIRLINES", region: "BD" },
@@ -110,6 +180,9 @@ const SB_HUB_BY_REGION = {
   EASIA: "BKK",
   SASIA: "DXB",
   SEASIA: "DXB",
+  OCEANIA: "SIN",
+  AFRICA: "DXB",
+  LATAM: "DXB",
   MENA: "DXB",
   BD: "DXB"
 };
@@ -123,5 +196,8 @@ const SB_REGION_CARRIERS = {
   EASIA: ["CX", "KE", "NH", "SQ"],
   MENA: ["EK", "QR", "EY", "SV", "TK"],
   EUROPE: ["EK", "QR", "TK", "BA", "LH", "AF"],
+  OCEANIA: ["SQ", "MH", "EK", "QR"],
+  AFRICA: ["EK", "QR", "EY", "TK"],
+  LATAM: ["EK", "QR", "TK"],
   NA: ["TK", "EK", "QR"]
 };

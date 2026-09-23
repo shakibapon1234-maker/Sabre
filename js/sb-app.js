@@ -20,8 +20,12 @@ function selectWs(letter) {
    by typing HELP / ? in the terminal.
 --------------------------------------------------------------------- */
 const SB_HELP_ENTRIES = [
+  { cmd: "W/-DHAKA", desc: "Search airport code by city or airport name" },
+  { cmd: "W/-BANGLADESH", desc: "List training airports for a country" },
+  { cmd: "W/-COUNTRIES", desc: "Show ISO country-code list" },
+  { cmd: "120NOVDACBKK", desc: "Sabre availability — DDMMM + origin + destination" },
   { cmd: "W/-DAC", desc: "এয়ারপোর্ট/শহর কোড এনকোড-ডিকোড" },
-  { cmd: "1N25DECDACLHR", desc: "এভেইলিবিলিটি — DDMMM + ORG + DST" },
+  { cmd: "125DECDACLHR", desc: "এভেইলিবিলিটি — DDMMM + ORG + DST" },
   { cmd: "0Y1", desc: "সেল — ক্লাস + লাইন নম্বর (কানেকশন হলে ২ সেগমেন্ট বসবে)" },
   { cmd: "-RAHMAN/ANIS MR", desc: "নাম ফিল্ড (একাধিক প্যাসেঞ্জারের জন্য চেইন করে দিন)" },
   { cmd: "9DAC 01700000000-A", desc: "ফোন ফিল্ড" },

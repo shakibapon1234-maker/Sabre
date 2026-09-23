@@ -1,7 +1,7 @@
 /* =========================================================================
    SABRE TRAINING SIMULATOR — AVAILABILITY ENGINE
    Independent educational tool — no affiliation with Sabre Corporation.
-   Builds a Sabre-style 1N/1A display for a queried city pair + date,
+   Builds a Sabre-style 1 availability display for a queried city pair + date,
    mixing direct options with realistic 1-stop connections when the
    origin/destination regions don't share a direct carrier.
    ========================================================================= */

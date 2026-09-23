@@ -8,18 +8,38 @@
    W/-XXX  — encode/decode a 3-letter city/airport code
 --------------------------------------------------------------------- */
 function cmdEncodeDecode(arg) {
-  const code = arg.toUpperCase();
-  const info = SB_AIRPORTS[code];
-  if (info) { sbPrint(`${code}  ${info.city}/${info.name}/${info.country}`); return; }
-  sbWarn(`UNABLE TO DECODE - ${code} NOT IN TRAINING DATABASE`);
+  const query = arg.trim().toUpperCase().replace(/^C(?:OUNTRY)?\s+/, '');
+  if (query === 'COUNTRIES' || query === 'COUNTRY LIST') {
+    sbPrint('TRAINING COUNTRY CODES (ISO)');
+    Object.entries(SB_COUNTRY_CODES).forEach(([code, country]) => sbPrint(`${code}  ${country}`));
+    return;
+  }
+  const info = SB_AIRPORTS[query];
+  if (info) { sbPrint(`${query}  ${info.city}/${info.name}/${info.country}`); return; }
+
+  const aliases = { ...Object.fromEntries(Object.entries(SB_COUNTRY_CODES).map(([code, country]) => [code, country])), UAE: 'UAE', UK: 'UK', USA: 'USA' };
+  const country = aliases[query] || query;
+  const isCountryQuery = Object.values(SB_COUNTRY_CODES).includes(country);
+  const matches = Object.entries(SB_AIRPORTS)
+    .filter(([, airport]) => isCountryQuery
+      ? airport.country === country
+      : airport.city.includes(query) || airport.name.includes(query))
+    .slice(0, 12);
+  if (matches.length) {
+    const heading = matches[0][1].country === country ? `AIRPORTS IN ${country}` : `CODE SEARCH - ${query}`;
+    sbPrint(heading);
+    matches.forEach(([code, airport]) => sbPrint(`${code}  ${airport.city} / ${airport.name} / ${airport.country}`));
+    return;
+  }
+  sbWarn(`NO AIRPORT OR COUNTRY MATCH - ${query} NOT IN TRAINING DATABASE`);
 }
 
 /* ---------------------------------------------------------------------
-   1N/1A  DDMMMCITYCITY — availability display (direct + connections)
+   1  DDMMMCITYCITY — availability display (direct + connections)
 --------------------------------------------------------------------- */
 function cmdAvailability(raw) {
-  const m = raw.match(/^1[NA](\d{2}[A-Z]{3})([A-Z]{3})([A-Z]{3})$/);
-  if (!m) { sbWarn("FORMAT: 1N<DDMMM><ORG><DST>  e.g. 1N25DECDACLHR"); return; }
+  const m = raw.match(/^1(\d{2}[A-Z]{3})([A-Z]{3})([A-Z]{3})$/);
+  if (!m) { sbWarn("FORMAT: 1<DDMMM><ORG><DST>  e.g. 120NOVDACBKK"); return; }
   const [, date, org, dst] = m;
 
   if (org === dst) { sbWarn("ORIGIN AND DESTINATION CANNOT BE THE SAME"); return; }
@@ -57,7 +77,7 @@ function cmdSell(raw) {
   const [, cls, lineStr] = m;
   const line = parseInt(lineStr, 10);
   const cache = sbState._availCache;
-  if (!cache) { sbWarn("NO AVAILABILITY DISPLAYED - USE 1N ENTRY FIRST"); return; }
+  if (!cache) { sbWarn("NO AVAILABILITY DISPLAYED - USE 1 ENTRY FIRST"); return; }
   const opt = cache[line - 1];
   if (!opt) { sbWarn(`LINE ${line} NOT FOUND IN LAST AVAILABILITY DISPLAY`); return; }
 
@@ -222,8 +242,8 @@ function sbParse(raw) {
   if (!cmd) return;
   const upper = cmd.toUpperCase();
 
-  if (/^W\/-[A-Z]{3}$/.test(upper)) return cmdEncodeDecode(upper.slice(3));
-  if (/^1[NA]\d{2}[A-Z]{3}[A-Z]{6}$/.test(upper)) return cmdAvailability(upper);
+  if (/^W\/-[A-Z][A-Z .'-]*$/.test(upper)) return cmdEncodeDecode(upper.slice(3));
+  if (/^1\d{2}[A-Z]{3}[A-Z]{6}$/.test(upper)) return cmdAvailability(upper);
   if (/^0[A-Z]\d+$/.test(upper)) return cmdSell(upper);
   if (/^-[A-Z]/.test(upper)) return cmdName(upper);
   if (/^9[A-Z]/.test(upper)) return cmdPhone(upper);
