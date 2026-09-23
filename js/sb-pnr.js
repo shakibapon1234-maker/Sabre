@@ -143,7 +143,10 @@ function sbRenderAvailabilityBoard(options, date) {
     detail.querySelector('.sb-hold-sell').addEventListener('click', () => {
       const cls = detail.querySelector('.sb-hold-class').value;
       const pax = detail.querySelector('.sb-pax-count').value;
-      cmdSell(`0${cls}${line}`, Number(pax));
+      if (cmdSell(`0${cls}${line}`, Number(pax))) {
+        detail.classList.remove('open');
+        board.classList.add('sb-hold-locked');
+      }
     });
     detail.querySelector('.sb-hold-close').addEventListener('click', () => detail.classList.remove('open'));
     row.querySelector('.sb-avail-arrow').addEventListener('click', () => sbOpenSeatHold(line, classes.find(c => c.startsWith('Y'))?.charAt(0) || classes[0].charAt(0), detail));

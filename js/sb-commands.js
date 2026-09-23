@@ -81,13 +81,17 @@ function cmdAvailability(raw) {
 --------------------------------------------------------------------- */
 function cmdSell(raw, quantity = 1) {
   const m = raw.match(/^0([A-Z])(\d+)$/);
-  if (!m) { sbWarn("FORMAT: 0<CLASS><LINE>  e.g. 0Y1"); return; }
+  if (!m) { sbWarn("FORMAT: 0<CLASS><LINE>  e.g. 0Y1"); return false; }
   const [, cls, lineStr] = m;
   const line = parseInt(lineStr, 10);
   const cache = sbState._availCache;
-  if (!cache) { sbWarn("NO AVAILABILITY DISPLAYED - USE 1 ENTRY FIRST"); return; }
+  if (!cache) { sbWarn("NO AVAILABILITY DISPLAYED - USE 1 ENTRY FIRST"); return false; }
+  if (sbState.booked.length > 0 && !sbState.ended) {
+    sbWarn("UNSAVED SEAT HOLD EXISTS - ENTER E/ER TO CREATE PNR OR XI TO IGNORE BEFORE A NEW HOLD");
+    return false;
+  }
   const opt = cache[line - 1];
-  if (!opt) { sbWarn(`LINE ${line} NOT FOUND IN LAST AVAILABILITY DISPLAY`); return; }
+  if (!opt) { sbWarn(`LINE ${line} NOT FOUND IN LAST AVAILABILITY DISPLAY`); return false; }
 
   sbPrint("BOOKING STATUS: SEGMENTS ADDED TO PNR", "sb-booking-status");
   const weekDays = ['', 'SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
@@ -102,6 +106,7 @@ function cmdSell(raw, quantity = 1) {
     const dayName = weekDays[Number(s.day)] || '---';
     sbPrint(` ${sbState.booked.length} ${s.al.padEnd(5)} ${s.fn.padEnd(4)} ${s.cls.padEnd(2)} ${s.date} ${dayName}  ${s.dep.padEnd(4)} ${s.arr.padEnd(4)} ${s.status.padEnd(4)} ${s.depT}  ${s.arrT}${dayOverTag}`);
   });
+  return true;
 }
 
 /* ---------------------------------------------------------------------
