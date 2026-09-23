@@ -285,6 +285,7 @@
   .term-area .line-ok{color:#7fd9a0;}
   .term-area .line-warn{color:#e8b95f;}
   .term-area .line-echo{color:#8fd0f0;}
+  .term-area .sb-booking-status{color:#fff;font-family:var(--font-ui);font-size:22px;line-height:1.25;font-weight:800;letter-spacing:.2px;margin:14px 0 8px;}
   .sb-avail-board{color:#e8edf5;font-family:var(--font-mono);margin-top:8px;min-width:900px;}
   .sb-avail-header{padding:8px 10px 12px;border-bottom:1px solid #3a4656;color:#f1f3f6;font-size:15px;}
   .sb-avail-row{display:grid;grid-template-columns:42px 54px 70px minmax(330px,1fr) 130px 170px 52px 38px;align-items:start;gap:8px;padding:14px 12px;border-bottom:1px dashed #3a4656;font-size:15px;line-height:1.55;}
@@ -426,7 +427,7 @@
     </div>
     <button class="cmd-icon-btn" title="Expand">⤢</button>
     <button class="send-btn" onclick="sendCmd()">Send</button>
-    <button class="pill-btn" title="History">↺</button>
+    <button class="pill-btn" title="History" onclick="sbRecallHistory(-1)">↺</button>
     <button class="pill-btn" onclick="sbLoadLessonPNR()">Load Lesson PNR</button>
     <button class="pill-btn" onclick="sbOpenCommandHelper()">🪄 Command Helper</button>
   </div>

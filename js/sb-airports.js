@@ -202,3 +202,21 @@ const SB_REGION_CARRIERS = {
   LATAM: ["EK", "QR", "TK"],
   NA: ["TK", "EK", "QR"]
 };
+
+// Only these carrier/route pairs are rendered as non-stop in training.
+// Other routes are built as connecting itineraries.
+const SB_DIRECT_ROUTE_CARRIERS = {
+  "DAC-BKK": ["TG", "BS", "BG"], "BKK-DAC": ["TG", "BS", "BG"],
+  "DAC-DXB": ["EK", "BS", "FZ"], "DXB-DAC": ["EK", "BS", "FZ"],
+  "DAC-KUL": ["MH", "BG", "BS"], "KUL-DAC": ["MH", "BG", "BS"],
+  "DAC-SIN": ["SQ", "BG", "BS"], "SIN-DAC": ["SQ", "BG", "BS"],
+  "DAC-DOH": ["QR", "BG"], "DOH-DAC": ["QR", "BG"],
+  "DAC-JED": ["SV", "BG"], "JED-DAC": ["SV", "BG"],
+  "DAC-DEL": ["BG", "AI", "BS"], "DEL-DAC": ["BG", "AI", "BS"],
+  "DAC-CCU": ["BG", "BS", "AI"], "CCU-DAC": ["BG", "BS", "AI"],
+  "DAC-CMB": ["UL", "BG"], "CMB-DAC": ["UL", "BG"],
+  "DAC-KTM": ["BG", "BS"], "KTM-DAC": ["BG", "BS"],
+  "DAC-CAN": ["CZ"], "CAN-DAC": ["CZ"],
+  "DAC-HKG": ["CX"], "HKG-DAC": ["CX"],
+  "DAC-IST": ["TK"], "IST-DAC": ["TK"]
+};

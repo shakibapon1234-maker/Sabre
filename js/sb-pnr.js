@@ -29,6 +29,21 @@ function sbEmptyState() {
   };
 }
 let sbState = sbEmptyState();
+let sbCommandHistory = [];
+let sbHistoryIndex = -1;
+
+function sbRememberCommand(command) {
+  if (sbCommandHistory.at(-1) !== command) sbCommandHistory.push(command);
+  sbHistoryIndex = sbCommandHistory.length;
+}
+
+function sbRecallHistory(direction) {
+  const input = document.getElementById('cmdInput');
+  if (!input || sbCommandHistory.length === 0) return;
+  sbHistoryIndex = Math.max(0, Math.min(sbCommandHistory.length - 1, sbHistoryIndex + direction));
+  input.value = sbCommandHistory[sbHistoryIndex];
+  input.focus();
+}
 
 /* ---------------------------------------------------------------------
    RESET SESSION — used by the terminal shell and the Electron menu
@@ -127,7 +142,6 @@ function sbRenderAvailabilityBoard(options, date) {
       const cls = detail.querySelector('.sb-hold-class').value;
       const pax = detail.querySelector('.sb-pax-count').value;
       cmdSell(`0${cls}${line}`, Number(pax));
-      sbPrint(`SEAT HOLD REQUESTED - ${pax} PASSENGER(S), CLASS ${cls}`, 'line-ok');
     });
     detail.querySelector('.sb-hold-close').addEventListener('click', () => detail.classList.remove('open'));
     row.querySelector('.sb-avail-arrow').addEventListener('click', () => sbOpenSeatHold(line, classes.find(c => c.startsWith('Y'))?.charAt(0) || classes[0].charAt(0), detail));

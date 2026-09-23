@@ -89,15 +89,18 @@ function cmdSell(raw, quantity = 1) {
   const opt = cache[line - 1];
   if (!opt) { sbWarn(`LINE ${line} NOT FOUND IN LAST AVAILABILITY DISPLAY`); return; }
 
+  sbPrint("BOOKING STATUS: SEGMENTS ADDED TO PNR", "sb-booking-status");
+  const weekDays = ['', 'SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
   opt.legs.forEach(leg => {
     sbState.booked.push({
       al: leg.al, fn: leg.fn, cls, date: opt.date, dep: leg.dep, arr: leg.arr,
-      status: `HK${quantity}`, depT: leg.depT || "----", arrT: leg.arrT || "----",
+      status: `SS${quantity}`, depT: leg.depT || "----", arrT: leg.arrT || "----",
       eq: leg.eq, day: leg.day, dayOver: leg.dayOver
     });
     const s = sbState.booked[sbState.booked.length - 1];
     const dayOverTag = s.dayOver ? `+${s.dayOver}` : '';
-    sbPrint(` ${sbState.booked.length} ${s.al} ${s.fn}${s.cls} ${s.date} ${s.day} ${s.dep}${s.arr} HK1 ${s.depT} ${s.arrT}${dayOverTag} E0 ${s.eq}`);
+    const dayName = weekDays[Number(s.day)] || '---';
+    sbPrint(` ${sbState.booked.length} ${s.al.padEnd(5)} ${s.fn.padEnd(4)} ${s.cls.padEnd(2)} ${s.date} ${dayName}  ${s.dep.padEnd(4)} ${s.arr.padEnd(4)} ${s.status.padEnd(4)} ${s.depT}  ${s.arrT}${dayOverTag}`);
   });
 }
 
@@ -276,6 +279,7 @@ function sendCmd() {
   const input = document.getElementById('cmdInput');
   const val = input.value.trim();
   if (!val) return;
+  if (typeof sbRememberCommand === 'function') sbRememberCommand(val.toUpperCase());
   sbEcho(val);
   sbParse(val);
   input.value = '';

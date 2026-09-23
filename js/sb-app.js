@@ -65,4 +65,6 @@ function sbUseHelpCmd(cmd) {
 
 document.getElementById('cmdInput').addEventListener('keydown', e => {
   if (e.key === 'Enter') sendCmd();
+  if (e.ctrlKey && e.key === 'ArrowUp') { e.preventDefault(); sbRecallHistory(-1); }
+  if (e.ctrlKey && e.key === 'ArrowDown') { e.preventDefault(); sbRecallHistory(1); }
 });

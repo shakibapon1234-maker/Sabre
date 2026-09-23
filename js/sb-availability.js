@@ -89,12 +89,8 @@ function sbGenerateAvailability(org, dst, date) {
   const rnd = sbRand(seed);
   const dayOfWeek = String(1 + Math.floor(rnd() * 7));
 
-  const sameRegion = oInfo.region === dInfo.region;
-  const oneIsBD = oInfo.region === "BD" || dInfo.region === "BD";
-  const regionalPair = oneIsBD && ["BD", "SASIA", "SEASIA", "MENA"].includes(
-    oInfo.region === "BD" ? dInfo.region : oInfo.region
-  );
-  const directPossible = sameRegion || regionalPair;
+  const directCarriers = SB_DIRECT_ROUTE_CARRIERS[`${org}-${dst}`] || [];
+  const directPossible = directCarriers.length > 0;
 
   const options = [];
 
@@ -103,13 +99,8 @@ function sbGenerateAvailability(org, dst, date) {
   // direct service (such as DAC-DXB); each retains a unique schedule/carrier.
   if (directPossible) {
     const nDirect = 10;
-    // Common Bangladesh-UAE schedule: keep DAC-DXB close to the reference
-    // Sabre board instead of mixing in carriers that do not operate it.
-    const routeCarrierPool = (org === "DAC" && dst === "DXB") || (org === "DXB" && dst === "DAC")
-      ? ["EK", "BS", "FZ", "EK", "FZ", "EK", "BS", "FZ", "EK", "FZ"]
-      : null;
     for (let i = 0; i < nDirect; i++) {
-      const al = routeCarrierPool ? routeCarrierPool[i] : sbPickCarrier(rnd, oInfo.region, dInfo.region);
+      const al = directCarriers[i % directCarriers.length];
       const elapsed = 90 + Math.floor(rnd() * 420); // 1.5h - 8.5h
       options.push({ legs: [sbBuildLeg(rnd, al, org, dst, 300 + i * 240, elapsed, dayOfWeek)] });
     }
