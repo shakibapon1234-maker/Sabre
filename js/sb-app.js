@@ -68,3 +68,12 @@ document.getElementById('cmdInput').addEventListener('keydown', e => {
   if (e.ctrlKey && e.key === 'ArrowUp') { e.preventDefault(); sbRecallHistory(-1); }
   if (e.ctrlKey && e.key === 'ArrowDown') { e.preventDefault(); sbRecallHistory(1); }
 });
+document.getElementById('historyBtn').addEventListener('click', () => sbRecallHistory(-1));
+
+// Electron/browser menus can intercept Ctrl+Arrow before the input receives
+// it, so capture it at window level as well.
+window.addEventListener('keydown', e => {
+  if (!e.ctrlKey) return;
+  if (e.key === 'ArrowUp') { e.preventDefault(); sbRecallHistory(-1); }
+  if (e.key === 'ArrowDown') { e.preventDefault(); sbRecallHistory(1); }
+}, true);

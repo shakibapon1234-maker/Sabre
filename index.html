@@ -294,6 +294,7 @@
   .sb-class-bucket:hover,.sb-class-bucket:focus{color:#35c6bb;text-decoration:underline;outline:none;}
   .sb-avail-arrow{color:#fff;background:transparent;border:0;font-size:26px;line-height:18px;cursor:pointer;padding:0;}
   .sb-avail-arrow:hover{color:#35c6bb;}
+  .sb-avail-eq small{display:block;color:#35c6bb;font-size:10px;white-space:nowrap;}
   .sb-seat-hold{display:none;background:#f4f4f4;color:#252a31;font-family:var(--font-ui);border-bottom:1px solid #b7bcc4;}
   .sb-seat-hold.open{display:block;}
   .sb-flight-detail{padding:14px 16px;border-bottom:1px solid #c9cdd2;font-size:13px;}
@@ -427,7 +428,7 @@
     </div>
     <button class="cmd-icon-btn" title="Expand">⤢</button>
     <button class="send-btn" onclick="sendCmd()">Send</button>
-    <button class="pill-btn" title="History" onclick="sbRecallHistory(-1)">↺</button>
+    <button class="pill-btn" id="historyBtn" title="History">↺</button>
     <button class="pill-btn" onclick="sbLoadLessonPNR()">Load Lesson PNR</button>
     <button class="pill-btn" onclick="sbOpenCommandHelper()">🪄 Command Helper</button>
   </div>

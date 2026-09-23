@@ -98,7 +98,7 @@ function sbGenerateAvailability(org, dst, date) {
   // than a single result.  Keep ten direct options for routings that have
   // direct service (such as DAC-DXB); each retains a unique schedule/carrier.
   if (directPossible) {
-    const nDirect = 10;
+    const nDirect = 6;
     for (let i = 0; i < nDirect; i++) {
       const al = directCarriers[i % directCarriers.length];
       const elapsed = 90 + Math.floor(rnd() * 420); // 1.5h - 8.5h
@@ -108,8 +108,17 @@ function sbGenerateAvailability(org, dst, date) {
 
   // Use a connection only when the routing has no direct service.  This
   // prevents a DAC-DXB display from incorrectly showing a DXB connection.
-  const hub = SB_HUB_BY_REGION[dInfo.region] || "DXB";
-  if (!directPossible && hub !== org && hub !== dst) {
+  // Even a route with non-stop service has connecting alternatives in a GDS
+  // display.  Choose a sensible alternate hub so it is never the destination.
+  const transitHubs = {
+    "DAC-DXB": "DOH", "DXB-DAC": "DOH", "DAC-BKK": "KUL", "BKK-DAC": "KUL",
+    "DAC-KUL": "SIN", "KUL-DAC": "SIN", "DAC-SIN": "KUL", "SIN-DAC": "KUL",
+    "DAC-DOH": "DXB", "DOH-DAC": "DXB", "DAC-JED": "DXB", "JED-DAC": "DXB",
+    "DAC-DEL": "DXB", "DEL-DAC": "DXB", "DAC-CCU": "DEL", "CCU-DAC": "DEL",
+    "DAC-CMB": "KUL", "CMB-DAC": "KUL", "DAC-KTM": "DEL", "KTM-DAC": "DEL"
+  };
+  const hub = transitHubs[`${org}-${dst}`] || SB_HUB_BY_REGION[dInfo.region] || "DXB";
+  if (hub !== org && hub !== dst) {
     const al1 = sbPickCarrier(rnd, oInfo.region, "MENA");
     const al2 = sbPickCarrier(rnd, "MENA", dInfo.region);
     const leg1 = sbBuildLeg(rnd, al1, org, hub, 120 + Math.floor(rnd() * 300), 200 + Math.floor(rnd() * 200), dayOfWeek);
