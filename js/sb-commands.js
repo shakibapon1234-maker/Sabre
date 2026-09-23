@@ -51,27 +51,35 @@ function cmdAvailability(raw) {
   const options = sbGenerateAvailability(org, dst, date);
   if (!options) { sbWarn(`NO SERVICE FOUND ${org}${dst} ${date}`); return; }
 
-  sbPrint(`** SABRE AVAILABILITY - ${org}${dst} ${date} 0000 **`);
-  sbPrint(` ${org} ${dst} ${date}  F 0000  DIRECT/CONNECT`);
+  sbState._availCache = options.map(opt => ({
+    date, dep: opt.legs[0].dep, arr: opt.legs[opt.legs.length - 1].arr, legs: opt.legs
+  }));
+  if (typeof sbRenderAvailabilityBoard === 'function') {
+    sbRenderAvailabilityBoard(options, date);
+    return;
+  }
+
+  const weekDays = ['', 'SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
+  const displayDay = weekDays[Number(options[0]?.legs[0]?.day)] || '---';
+  sbPrint(`${date} ${displayDay} ${org} ${dst}`);
   options.forEach((opt, i) => {
     opt.legs.forEach((leg, li) => {
       const lineNo = li === 0 ? String(i + 1) : ' ';
       const dayOverTag = leg.dayOver ? `+${leg.dayOver}` : '';
-      sbPrint(` ${lineNo} ${leg.al} ${leg.fn} ${leg.cls}  ${leg.dep} ${leg.arr} ${leg.depT} ${leg.arrT}${dayOverTag} ${date} E0 ${leg.eq} ${leg.day} 0`);
+      const classes = leg.cls.split(' ');
+      sbPrint(` ${lineNo.padStart(2)} ${leg.al.padEnd(5)} ${leg.fn.padEnd(4)} ${classes.slice(0, 9).join(' ').padEnd(27)} ${leg.dep.padEnd(4)} ${leg.arr.padEnd(4)} ${leg.depT}  ${leg.arrT}${dayOverTag.padStart(3)}  ${leg.eq}`);
+      if (classes.length > 9) sbPrint(`          ${classes.slice(9).join(' ')}`);
     });
     if (opt.legs.length > 1) sbPrint(`   CONNECTION VIA ${opt.legs[0].arr} — 2 SEGMENTS WILL BE SOLD TOGETHER`, 'line-warn');
   });
 
-  sbState._availCache = options.map(opt => ({
-    date, dep: opt.legs[0].dep, arr: opt.legs[opt.legs.length - 1].arr, legs: opt.legs
-  }));
 }
 
 /* ---------------------------------------------------------------------
    0<CLASS><LINE> — sell from displayed availability (all legs of that
    option are booked; a connection therefore adds 2 PNR lines)
 --------------------------------------------------------------------- */
-function cmdSell(raw) {
+function cmdSell(raw, quantity = 1) {
   const m = raw.match(/^0([A-Z])(\d+)$/);
   if (!m) { sbWarn("FORMAT: 0<CLASS><LINE>  e.g. 0Y1"); return; }
   const [, cls, lineStr] = m;
@@ -84,7 +92,7 @@ function cmdSell(raw) {
   opt.legs.forEach(leg => {
     sbState.booked.push({
       al: leg.al, fn: leg.fn, cls, date: opt.date, dep: leg.dep, arr: leg.arr,
-      status: "HK1", depT: leg.depT || "----", arrT: leg.arrT || "----",
+      status: `HK${quantity}`, depT: leg.depT || "----", arrT: leg.arrT || "----",
       eq: leg.eq, day: leg.day, dayOver: leg.dayOver
     });
     const s = sbState.booked[sbState.booked.length - 1];

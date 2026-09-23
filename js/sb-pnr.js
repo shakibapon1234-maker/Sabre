@@ -84,6 +84,66 @@ function sbPrint(text, cls) {
 }
 function sbWarn(text) { sbPrint(text, 'line-warn'); }
 
+/* ---------------------------------------------------------------------
+   INTERACTIVE AVAILABILITY — arrow or any booking-class bucket opens a
+   Sabre-style seat-hold panel for that flight.
+--------------------------------------------------------------------- */
+function sbRenderAvailabilityBoard(options, date) {
+  const term = document.getElementById('termArea');
+  if (!term) return;
+  const days = ['', 'SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
+  const firstLeg = options[0]?.legs[0];
+  const board = document.createElement('section');
+  board.className = 'sb-avail-board';
+  board.innerHTML = `<div class="sb-avail-header">${date} ${days[Number(firstLeg?.day)] || '---'} &nbsp; ${firstLeg?.dep || ''} ${options[0]?.legs.at(-1)?.arr || ''}</div>`;
+
+  options.forEach((option, index) => {
+    const leg = option.legs[0];
+    const line = index + 1;
+    const classes = leg.cls.split(' ');
+    const row = document.createElement('div');
+    row.className = 'sb-avail-row';
+    row.innerHTML = `
+      <span class="sb-avail-num">${line}</span><span class="sb-avail-air">${leg.al}</span><span class="sb-avail-flight">${leg.fn}</span>
+      <span class="sb-avail-classes"></span><span class="sb-avail-route">${leg.dep}&nbsp;&nbsp;${leg.arr}</span>
+      <span class="sb-avail-time">${leg.depT}&nbsp;&nbsp;${leg.arrT}${leg.dayOver ? ` +${leg.dayOver}` : ''}</span>
+      <span class="sb-avail-eq">${leg.eq}</span><button class="sb-avail-arrow" type="button" aria-label="Open seat hold">⌄</button>`;
+    const classBox = row.querySelector('.sb-avail-classes');
+    classes.forEach(bucket => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'sb-class-bucket';
+      button.textContent = bucket;
+      button.addEventListener('click', () => sbOpenSeatHold(line, bucket.charAt(0), detail));
+      classBox.appendChild(button);
+    });
+
+    const detail = document.createElement('div');
+    detail.className = 'sb-seat-hold';
+    detail.innerHTML = `
+      <div class="sb-flight-detail">From: ${leg.dep} ${date} at ${leg.depT} &nbsp; To: ${leg.arr} ${date} at ${leg.arrT} &nbsp; Flight time: training schedule &nbsp; Equipment: ${leg.eq}</div>
+      <div class="sb-hold-controls"><label>Passengers <select class="sb-pax-count"><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option><option>9</option></select></label><label>Class ${leg.dep}-${leg.arr} <select class="sb-hold-class">${classes.map(c => `<option value="${c.charAt(0)}">${c.charAt(0)}</option>`).join('')}</select></label><button class="sb-hold-sell" type="button">Sell</button><button class="sb-hold-close" type="button" aria-label="Close">⌃</button></div>`;
+    detail.querySelector('.sb-hold-sell').addEventListener('click', () => {
+      const cls = detail.querySelector('.sb-hold-class').value;
+      const pax = detail.querySelector('.sb-pax-count').value;
+      cmdSell(`0${cls}${line}`, Number(pax));
+      sbPrint(`SEAT HOLD REQUESTED - ${pax} PASSENGER(S), CLASS ${cls}`, 'line-ok');
+    });
+    detail.querySelector('.sb-hold-close').addEventListener('click', () => detail.classList.remove('open'));
+    row.querySelector('.sb-avail-arrow').addEventListener('click', () => sbOpenSeatHold(line, classes.find(c => c.startsWith('Y'))?.charAt(0) || classes[0].charAt(0), detail));
+    board.append(row, detail);
+  });
+  term.appendChild(board);
+  term.scrollTop = term.scrollHeight;
+}
+
+function sbOpenSeatHold(line, bookingClass, detail) {
+  document.querySelectorAll('.sb-seat-hold.open').forEach(panel => panel.classList.remove('open'));
+  detail.querySelector('.sb-hold-class').value = bookingClass;
+  detail.classList.add('open');
+  detail.scrollIntoView({ block: 'nearest' });
+}
+
 function sbSyncSidePanel() {
   const pnrLine = document.getElementById('panelPnrLine');
   const msg = document.getElementById('panelMsg');
