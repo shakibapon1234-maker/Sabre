@@ -23,6 +23,7 @@ function sbEmptyState() {
     ticketingArrangement: null,
     ssrEntries: [],
     fareQuote: null,        // { base, tax, total, currency }
+    privateFare: null,      // fare loaded through WPA <carrier> then PQ
     ticketed: false,
     eticketNumber: null,
     ended: false
@@ -111,11 +112,16 @@ function sbEcho(cmd) {
 }
 function sbPrint(text, cls) {
   const term = document.getElementById('termArea');
+  if (!term) return;
+  const str = String(text ?? '');
+  if (str.includes('\n')) {
+    str.split('\n').forEach(sub => sbPrint(sub, cls));
+    return;
+  }
   const line = document.createElement('div');
-  line.className = cls || (text === '*' ? 'line-display' : 'line-ok');
-  line.textContent = text;
+  line.className = cls || (str === '*' ? 'line-display' : 'line-pnr');
+  line.textContent = str || '\u00A0';
   term.appendChild(line);
-  term.appendChild(document.createElement('br'));
   term.scrollTop = term.scrollHeight;
 }
 function sbWarn(text) { sbPrint(text, 'line-warn'); }
@@ -209,11 +215,23 @@ function sbOpenSeatHold(line, bookingClass, detail) {
 function sbSyncSidePanel() {
   const pnrLine = document.getElementById('panelPnrLine');
   const msg = document.getElementById('panelMsg');
-  if (!pnrLine || !msg) return;
-  pnrLine.textContent = sbState.locator
-    ? `${sbState.locator}.${sbState.officeId}`
-    : `${SB_OFFICE}.${SB_OFFICE}`;
-  msg.textContent = sbState.ticketed ? "TICKETED" : (sbState.locator ? "ACTIVE PNR" : "NO MESSAGE");
+  if (pnrLine) {
+    pnrLine.textContent = sbState.locator
+      ? `${sbState.locator}.${sbState.officeId}`
+      : `${SB_OFFICE}.${SB_OFFICE}`;
+  }
+  if (msg) {
+    msg.textContent = sbState.ticketed ? "TICKETED" : (sbState.locator ? "ACTIVE PNR" : "NO MESSAGE");
+  }
+  const tabA = document.querySelector('#wsA .code');
+  if (tabA) {
+    if (sbState.locator && sbState.names.length) {
+      const pName = sbState.names[0].raw.replace('/', ' ');
+      tabA.textContent = `QIG ${sbState.locator} - ${pName}`;
+    } else {
+      tabA.textContent = SB_OFFICE;
+    }
+  }
 }
 
 /* ---------------------------------------------------------------------
@@ -224,44 +242,85 @@ function sbRenderPNR() {
     return "NO ACTIVE PNR — SELL A SEGMENT AND ADD A NAME FIRST";
   }
   const lines = [];
-  lines.push(sbState.names.length
-    ? sbState.names.map((n, i) => `${i + 1}.${n.raw}`).join('  ')
-    : '1.NAME PENDING');
+
+  // Names with 1.1 indexing
+  if (sbState.names.length) {
+    lines.push(sbState.names.map((n, i) => ` 1.${i + 1}${n.raw}`).join('  '));
+  } else {
+    lines.push(' 1.1NAME PENDING');
+  }
+
+  // Flight segments
   sbState.booked.forEach((s, i) => {
     const dayOverTag = s.dayOver ? `+${s.dayOver}` : '';
+    const st = sbState.locator ? s.status.replace(/^SS/, 'HK') : s.status;
+    const directConnect = `  /DC${s.al}*${sbRandomLocator()} /E`;
     lines.push(
-      ` ${i + 1} ${s.al} ${s.fn}${s.cls} ${s.date} ${s.day} ${s.dep}${s.arr} ${s.status} ` +
-      `${s.depT} ${s.arrT}${dayOverTag} ${s.date} E  0  ${s.eq}`
+      ` ${i + 1} ${s.al} ${s.fn}${s.cls} ${s.date} ${s.day} ${s.dep}${s.arr} ${st}  ${s.depT}  ${s.arrT}${dayOverTag}${directConnect}`
     );
   });
-  if (sbState.phones.length) {
-    lines.push("PHONES");
-    sbState.phones.forEach((p, i) => lines.push(` ${i + 1}.${p.raw}`));
-  }
+
+  // Ticketing arrangement
   if (sbState.ticketingArrangement) {
     lines.push("TKT/TIME LIMIT");
     lines.push(` 1.${sbState.ticketingArrangement}`);
   }
-  if (sbState.ssrEntries.length) {
-    lines.push("SPECIAL SERVICE REQUEST");
-    sbState.ssrEntries.forEach((s, i) => lines.push(` ${i + 1} ${s}`));
+
+  // Phones
+  if (sbState.phones.length) {
+    lines.push("PHONES");
+    sbState.phones.forEach((p, i) => lines.push(` ${i + 1}.${p.raw}`));
   }
+
+  // General facts & SSR (automatic advisory in Sabre)
+  if (sbState.locator) {
+    lines.push("PASSENGER DETAIL FIELD EXISTS - USE PD TO DISPLAY");
+    lines.push("GENERAL FACTS");
+    if (sbState.ssrEntries.length) {
+      sbState.ssrEntries.forEach((s, i) => lines.push(` ${i + 1}.${s}`));
+    } else {
+      const mainAl = sbState.booked[0]?.al || '1B';
+      const d = new Date();
+      const mon = ["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"][d.getMonth()];
+      const dt = `${String(d.getDate()).padStart(2,'0')}${mon}`;
+      lines.push(" 1.SSR OTHS 1B 270799072759 - SHORT TTL DUE TO MISSING CTCE/CTCM");
+      lines.push(` 2.SSR ADTK 1B TO ${mainAl} BY ${dt} 0601 ZZZ TIME ZONE OTHERWISE WILL BE XLD`);
+      lines.push(` 3.SSR OTHS 1B MISSING SSR CTCM MOBILE OR SSR CTCE EMAIL OR SSR CTCR NON-CONSENT FOR ${mainAl}`);
+    }
+  }
+
+  // Fare quote
   if (sbState.fareQuote) {
     const fq = sbState.fareQuote;
     lines.push(`FARE  ${fq.currency}${fq.base}  TAX ${fq.currency}${fq.tax}  TOTAL ${fq.currency}${fq.total}` +
       (fq.pax > 1 ? `  (${fq.pax} PAX)` : ''));
   }
-  if (sbState.receivedFrom) lines.push(`RECEIVED FROM - ${sbState.receivedFrom}`);
-  if (sbState.ticketed) {
-    lines.push(`ET ${sbState.eticketNumber}  ${sbState.names[0]?.raw || ''}`);
+
+  // Received From
+  if (sbState.receivedFrom) {
+    lines.push(`RECEIVED FROM - ${sbState.receivedFrom}`);
   }
-  lines.push(sbState.locator ? `${sbState.locator}  ${sbState.officeId}  ${sbState.dateStamp || ''}` : "*** NOT YET STORED — USE E TO END/SAVE ***");
+
+  // Footer line matching 3MUL.3MUL*ATW 0059/24SEP26 PUYPQE H M
+  if (sbState.locator) {
+    lines.push(`${sbState.officeId}.${sbState.officeId}*ATW ${sbSabreFooterStamp()} ${sbState.locator} H M`);
+  } else {
+    lines.push("*** NOT YET STORED — USE E TO END/SAVE ***");
+  }
+
   return lines.join('\n');
 }
 
 /* ---------------------------------------------------------------------
    UTILITIES
 --------------------------------------------------------------------- */
+function sbSabreFooterStamp() {
+  const d = new Date();
+  const mon = ["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"][d.getMonth()];
+  const time = `${String(d.getHours()).padStart(2,'0')}${String(d.getMinutes()).padStart(2,'0')}`;
+  const date = `${String(d.getDate()).padStart(2,'0')}${mon}${String(d.getFullYear()).slice(2)}`;
+  return `${time}/${date}`;
+}
 function sbRandomLocator() {
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
   let s = '';

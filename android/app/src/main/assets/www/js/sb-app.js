@@ -20,6 +20,9 @@ function selectWs(letter) {
    by typing HELP / ? in the terminal.
 --------------------------------------------------------------------- */
 const SB_HELP_ENTRIES = [
+  { cmd: "WPA MH", desc: "Select carrier for PQ fare load (airline name also accepted)" },
+  { cmd: "PQ", desc: "Load fare for the carrier selected with WPA" },
+  { cmd: "3PQ", desc: "Display the loaded PQ fare" },
   { cmd: "W/-DAC", desc: "এয়ারপোর্ট/শহর কোড এনকোড-ডিকোড" },
   { cmd: "1N25DECDACLHR", desc: "এভেইলিবিলিটি — DDMMM + ORG + DST" },
   { cmd: "0Y1", desc: "সেল — ক্লাস + লাইন নম্বর (কানেকশন হলে ২ সেগমেন্ট বসবে)" },

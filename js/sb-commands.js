@@ -193,10 +193,19 @@ function cmdEndTransaction(redisplay) {
   if (!sbState.locator) {
     sbState.locator = sbRandomLocator();
     sbState.dateStamp = sbNowStamp();
+    sbState.booked.forEach(s => {
+      s.status = s.status.replace(/^SS/, 'HK');
+    });
   }
   sbState.ended = true;
-  sbPrint(`${sbState.locator} HAS BEEN QUEUED TO 3MUL.3MUL`);
-  if (redisplay) sbPrint(sbRenderPNR());
+  sbPrint('DIRECT CONNECT IN PROGRESS, PLEASE WAIT', 'line-pnr');
+  sbPrint('', 'line-pnr');
+  if (redisplay) {
+    if (sbState.locator) sbPrint(sbState.locator, 'line-pnr');
+    sbPrint(sbRenderPNR(), 'line-pnr');
+  } else {
+    sbPrint(`${sbState.officeId}.${sbState.officeId}*ATW ${sbSabreFooterStamp()} ${sbState.locator} H M`, 'line-pnr');
+  }
   sbSyncSidePanel();
 }
 
@@ -209,6 +218,65 @@ function cmdEndTransaction(redisplay) {
 function cmdDisplayName() {
   if (!sbState.names.length) { sbWarn("NO NAMES IN PNR"); return; }
   sbState.names.forEach((n, i) => sbPrint(` ${i + 1}.${n.raw}`));
+}
+
+/* ---------------------------------------------------------------------
+   WPA <AIRLINE> / PQ / 3PQ — carrier fare-load training flow
+   WPA accepts either a two-letter carrier code (WPA MH) or its name
+   (WPA MALAYSIA AIRLINES).  PQ loads the quote and 3PQ displays it.
+--------------------------------------------------------------------- */
+function sbFindAirline(query) {
+  const value = query.trim().toUpperCase().replace(/\s+/g, ' ');
+  if (SB_AIRLINES[value]) return { code: value, ...SB_AIRLINES[value] };
+  const matches = Object.entries(SB_AIRLINES)
+    .filter(([, airline]) => airline.name === value)
+    .map(([code, airline]) => ({ code, ...airline }));
+  return matches.length === 1 ? matches[0] : null;
+}
+
+function cmdWpa(raw) {
+  const airline = sbFindAirline(raw.replace(/^WPA\s+/, ''));
+  if (!airline) {
+    sbWarn('AIRLINE NOT FOUND - FORMAT: WPA <2-LETTER CODE OR AIRLINE NAME>  e.g. WPA MH');
+    return;
+  }
+  sbState.privateFare = { carrier: airline.code, carrierName: airline.name, loaded: false };
+  sbPrint(`WPA ${airline.code} - ${airline.name} SELECTED`);
+  sbPrint('ENTER PQ TO LOAD FARE');
+}
+
+function cmdPq() {
+  if (!sbState.privateFare?.carrier) {
+    sbWarn('NO VALIDATING CARRIER SELECTED - ENTER WPA <AIRLINE> FIRST');
+    return;
+  }
+  const isMH = sbState.privateFare.carrier === 'MH';
+  const baseUsd = isMH ? 296 : 220 + ((sbState.privateFare.carrier.charCodeAt(0) * 7 + sbState.privateFare.carrier.charCodeAt(1)) % 181);
+  const rate = 123.65;
+  const baseBdt = Math.ceil(baseUsd * rate);
+  const tax = isMH ? 14249 : Math.round(baseBdt * 0.39);
+  sbState.privateFare = {
+    ...sbState.privateFare, loaded: true, baseUsd, rate, baseBdt, tax,
+    total: baseBdt + tax, fareBasis: isMH ? 'NBX0WBD' : `${sbState.privateFare.carrier}X0WBD`,
+    route: isMH ? 'DAC MH KUL' : 'DAC ' + sbState.privateFare.carrier + ' KUL'
+  };
+  sbPrint(`PQ FARE LOADED FOR ${sbState.privateFare.carrier} - ${sbState.privateFare.carrierName}`);
+  sbPrint('ENTER 3PQ TO DISPLAY FARE LOAD');
+}
+
+function cmdDisplayPq() {
+  const fare = sbState.privateFare;
+  if (!fare?.loaded) { sbWarn('NO PQ FARE LOAD ON FILE - ENTER WPA <AIRLINE>, THEN PQ'); return; }
+  sbPrint(`WPA${fare.carrier}«`, 'line-display');
+  sbPrint('');
+  sbPrint(`1-        BASE FARE       EQUIV AMOUNT       TAXES/FEES/CHARGES                 TOTAL`);
+  sbPrint(`          USD${fare.baseUsd.toFixed(2).padEnd(11)} BDT${fare.baseBdt.toString().padEnd(12)} BDT${fare.tax}XT                  BDT${fare.total}`);
+  sbPrint(`ADT-1     ${fare.fareBasis}`);
+  sbPrint(`${fare.route} Q25.00 NUC${fare.baseUsd.toFixed(2)}END ROE1.00`);
+  sbPrint(`RATE USED 1USD-${fare.rate.toFixed(2)}BDT`);
+  sbPrint('NONEND-SUBJ TO PENALTY');
+  sbPrint(`VALIDATING CARRIER SPECIFIED - ${fare.carrier} ${fare.carrierName}`);
+  sbPrint('BRANDED FARE /BASIC-BASIC');
 }
 
 function cmdDisplayItinerary() {
@@ -246,6 +314,20 @@ function cmdDisplaySSR() {
 
 function cmdRedisplay() {
   sbPrint(sbRenderPNR());
+}
+
+function cmdIgnoreRedisplay() {
+  const term = document.getElementById('termArea');
+  if (term) term.innerHTML = '';
+  sbPrint('DIRECT CONNECT IN PROGRESS, PLEASE WAIT', 'line-pnr');
+  sbPrint('', 'line-pnr');
+  sbEcho('IR');
+  sbPrint('', 'line-pnr');
+  if (sbState.locator) {
+    sbPrint(sbState.locator, 'line-pnr');
+  }
+  sbPrint(sbRenderPNR(), 'line-pnr');
+  sbSyncSidePanel();
 }
 
 /* ---------------------------------------------------------------------
@@ -300,6 +382,9 @@ function sbParse(raw) {
   const upper = cmd.toUpperCase();
 
   if (/^W\/-[A-Z][A-Z .'-]*$/.test(upper)) return cmdEncodeDecode(upper.slice(3));
+  if (/^WPA\s+.+$/.test(upper)) return cmdWpa(upper);
+  if (/^PQ$/.test(upper)) return cmdPq();
+  if (/^3PQ$/.test(upper)) return cmdDisplayPq();
   if (/^1\d{2}[A-Z]{3}[A-Z]{6}$/.test(upper)) return cmdAvailability(upper);
   if (/^0[A-Z]\d+$/.test(upper)) return cmdSell(upper);
   if (/^-[A-Z]/.test(upper)) return cmdName(upper);
@@ -318,7 +403,7 @@ function sbParse(raw) {
   if (/^\*A$|^\*R$|^\*$/.test(upper)) return cmdRedisplay();
   if (/^\*[A-Z0-9]{5,6}$/.test(upper)) return cmdRetrieve(upper);
   if (/^WTP?$/.test(upper)) return cmdIssueTicket();
-  if (/^IR$/.test(upper)) return cmdRedisplay();
+  if (/^IR$/.test(upper)) return cmdIgnoreRedisplay();
   if (/^I$|^IG$|^XI$/.test(upper)) return cmdIgnore();
   if (/^HELP$|^\?$/.test(upper)) return cmdHelp();
 
@@ -333,6 +418,10 @@ function sendCmd() {
   const val = input.value.trim();
   if (!val) return;
   if (typeof sbRememberCommand === 'function') sbRememberCommand(val.toUpperCase());
+  if (val.toUpperCase() === 'IR') {
+    const term = document.getElementById('termArea');
+    if (term) term.innerHTML = '';
+  }
   sbEcho(val);
   sbParse(val);
   input.value = '';
