@@ -18,9 +18,12 @@ function cmdFareShopJR() {
   const term = document.getElementById('termArea');
   if (!term) return;
 
+  // Clear previous output so mask starts right at the top
+  term.innerHTML = '';
+  sbEcho('JR');
+
   const todayStr = sbGetSabreDate();
 
-  // Create the JR - CREATE mask wrapper
   const wrap = document.createElement('div');
   wrap.id = 'sbJrMask';
   wrap.className = 'sb-jr-mask';
@@ -29,161 +32,161 @@ function cmdFareShopJR() {
     <div class="jr-header-line">JR - CREATE</div>
     <div class="jr-dash-line">--------------------------------------------------------------------------------</div>
 
-    <div class="jr-row jr-row-action">
-      <span class="jr-lbl">ACTION</span>
-      <input class="jr-inp jr-inp-action" id="jrAction" maxlength="1" value="" autofocus placeholder="P/C">
-      <span class="jr-txt">P TO PRICE / C TO CANCEL MASK WS/PQ</span>
-      <input class="jr-inp jr-inp-1" id="jrWsPq" maxlength="1" value="N">
-      <span class="jr-txt">X</span>
-      <input class="jr-inp jr-inp-1" id="jrX" maxlength="1" value="3">
+    <div class="jr-row">
+      <span style="min-width: 58px;">ACTION</span>
+      <input class="jr-inp" style="width: 28px; margin-right: 6px;" id="jrAction" maxlength="1" value="" autofocus>
+      <span>P TO PRICE / C TO CANCEL MASK WS/PQ</span>
+      <input class="jr-inp" style="width: 24px; margin-left: 20px;" id="jrWsPq" maxlength="1" value="N">
+      <span style="margin-left: 6px;">X</span>
+      <input class="jr-inp" style="width: 24px; margin-left: 6px;" id="jrX" maxlength="1" value="3">
     </div>
 
-    <div class="jr-row jr-row-priority">
-      <span class="jr-txt">PRIORITY-PRICE</span>
-      <input class="jr-inp jr-inp-1" id="jrPrioPrice" maxlength="1" value="1">
-      <span class="jr-txt">DIRECT/NON-STOP</span>
-      <input class="jr-inp jr-inp-1" id="jrDirect" maxlength="1" value="2">
-      <span class="jr-txt">TIME</span>
-      <input class="jr-inp jr-inp-1" id="jrTimePrio" maxlength="1" value="3">
-      <span class="jr-txt">CXR</span>
-      <input class="jr-inp jr-inp-1" id="jrCxrPrio" maxlength="1" value="4">
+    <div class="jr-row">
+      <span>PRIORITY-PRICE</span>
+      <input class="jr-inp" style="width: 24px;" id="jrPrioPrice" maxlength="1" value="1">
+      <span style="margin-left: 12px;">DIRECT/NON-STOP</span>
+      <input class="jr-inp" style="width: 24px;" id="jrDirect" maxlength="1" value="2">
+      <span style="margin-left: 12px;">TIME</span>
+      <input class="jr-inp" style="width: 24px;" id="jrTimePrio" maxlength="1" value="3">
+      <span style="margin-left: 12px;">CXR</span>
+      <input class="jr-inp" style="width: 24px;" id="jrCxrPrio" maxlength="1" value="4">
     </div>
 
-    <div class="jr-tbl-header">
-      <span class="col-head col-from">FROM</span>
-      <input class="jr-inp jr-inp-code col-from-box" id="jrFromMain" maxlength="3" value="DAC" placeholder="DAC">
-      <span class="col-head col-date">DATE</span>
-      <span class="col-head col-time">TIME/RANGE</span>
-      <span class="col-head col-cxr">CARRIER</span>
-      <span class="col-head col-cabin">CABIN</span>
+    <div class="jr-row" style="margin-top: 6px; color: #8b99ad; font-size: 11.5px; font-weight: 700;">
+      <span style="width: 44px; color: #cfd6e0;">FROM</span>
+      <input class="jr-inp" style="width: 44px; margin-right: 18px;" id="jrFromMain" maxlength="3" value="DAC">
+      <span style="width: 58px; text-align: center;">DATE</span>
+      <span style="width: 78px; text-align: center;">TIME/RANGE</span>
+      <span style="width: 56px; text-align: center;">CARRIER</span>
+      <span style="width: 24px; text-align: center;">CABIN</span>
     </div>
 
     <div class="jr-legs">
       <!-- Leg 1 -->
       <div class="jr-leg-row">
         <span class="leg-idx">1</span>
-        <input class="jr-inp jr-inp-1" id="jrConn1" maxlength="1" value="0">
-        <input class="jr-inp jr-inp-code" id="jrDst1" maxlength="3" value="KUL" placeholder="DST">
-        <input class="jr-inp jr-inp-date" id="jrDate1" maxlength="5" value="${todayStr}">
-        <input class="jr-inp jr-inp-time" id="jrTime1" maxlength="7" value="0700/¥-">
-        <input class="jr-inp jr-inp-cxr" id="jrCxr1" maxlength="5" value="/ /" placeholder="MH">
-        <input class="jr-inp jr-inp-1" id="jrCabin1" maxlength="1" value="Y">
+        <input class="jr-inp" style="width: 24px;" id="jrConn1" maxlength="1" value="0">
+        <input class="jr-inp" style="width: 44px;" id="jrDst1" maxlength="3" value="KUL">
+        <input class="jr-inp" style="width: 58px;" id="jrDate1" maxlength="5" value="${todayStr}">
+        <input class="jr-inp" style="width: 78px;" id="jrTime1" maxlength="7" value="0700/¥-">
+        <input class="jr-inp" style="width: 56px;" id="jrCxr1" maxlength="5" value="/ /">
+        <input class="jr-inp" style="width: 24px;" id="jrCabin1" maxlength="1" value="Y">
       </div>
       <!-- Leg 2 -->
       <div class="jr-leg-row">
         <span class="leg-idx">2</span>
-        <input class="jr-inp jr-inp-1" id="jrConn2" maxlength="1" value="0">
-        <input class="jr-inp jr-inp-code" id="jrDst2" maxlength="3" value="">
-        <input class="jr-inp jr-inp-date" id="jrDate2" maxlength="5" value="">
-        <input class="jr-inp jr-inp-time" id="jrTime2" maxlength="7" value="/¥-">
-        <input class="jr-inp jr-inp-cxr" id="jrCxr2" maxlength="5" value="/ /">
-        <input class="jr-inp jr-inp-1" id="jrCabin2" maxlength="1" value="Y">
+        <input class="jr-inp" style="width: 24px;" id="jrConn2" maxlength="1" value="0">
+        <input class="jr-inp" style="width: 44px;" id="jrDst2" maxlength="3" value="">
+        <input class="jr-inp" style="width: 58px;" id="jrDate2" maxlength="5" value="">
+        <input class="jr-inp" style="width: 78px;" id="jrTime2" maxlength="7" value="/¥-">
+        <input class="jr-inp" style="width: 56px;" id="jrCxr2" maxlength="5" value="/ /">
+        <input class="jr-inp" style="width: 24px;" id="jrCabin2" maxlength="1" value="Y">
       </div>
       <!-- Leg 3 -->
       <div class="jr-leg-row">
         <span class="leg-idx">3</span>
-        <input class="jr-inp jr-inp-1" id="jrConn3" maxlength="1" value="0">
-        <input class="jr-inp jr-inp-code" id="jrDst3" maxlength="3" value="">
-        <input class="jr-inp jr-inp-date" id="jrDate3" maxlength="5" value="">
-        <input class="jr-inp jr-inp-time" id="jrTime3" maxlength="7" value="/¥-">
-        <input class="jr-inp jr-inp-cxr" id="jrCxr3" maxlength="5" value="/ /">
-        <input class="jr-inp jr-inp-1" id="jrCabin3" maxlength="1" value="Y">
+        <input class="jr-inp" style="width: 24px;" id="jrConn3" maxlength="1" value="0">
+        <input class="jr-inp" style="width: 44px;" id="jrDst3" maxlength="3" value="">
+        <input class="jr-inp" style="width: 58px;" id="jrDate3" maxlength="5" value="">
+        <input class="jr-inp" style="width: 78px;" id="jrTime3" maxlength="7" value="/¥-">
+        <input class="jr-inp" style="width: 56px;" id="jrCxr3" maxlength="5" value="/ /">
+        <input class="jr-inp" style="width: 24px;" id="jrCabin3" maxlength="1" value="Y">
       </div>
       <!-- Leg 4 -->
       <div class="jr-leg-row">
         <span class="leg-idx">4</span>
-        <input class="jr-inp jr-inp-1" id="jrConn4" maxlength="1" value="0">
-        <input class="jr-inp jr-inp-code" id="jrDst4" maxlength="3" value="">
-        <input class="jr-inp jr-inp-date" id="jrDate4" maxlength="5" value="">
-        <input class="jr-inp jr-inp-time" id="jrTime4" maxlength="7" value="/¥-">
-        <input class="jr-inp jr-inp-cxr" id="jrCxr4" maxlength="5" value="/ /">
-        <input class="jr-inp jr-inp-1" id="jrCabin4" maxlength="1" value="Y">
+        <input class="jr-inp" style="width: 24px;" id="jrConn4" maxlength="1" value="0">
+        <input class="jr-inp" style="width: 44px;" id="jrDst4" maxlength="3" value="">
+        <input class="jr-inp" style="width: 58px;" id="jrDate4" maxlength="5" value="">
+        <input class="jr-inp" style="width: 78px;" id="jrTime4" maxlength="7" value="/¥-">
+        <input class="jr-inp" style="width: 56px;" id="jrCxr4" maxlength="5" value="/ /">
+        <input class="jr-inp" style="width: 24px;" id="jrCabin4" maxlength="1" value="Y">
       </div>
       <!-- Leg 5 -->
       <div class="jr-leg-row">
         <span class="leg-idx">5</span>
-        <input class="jr-inp jr-inp-1" id="jrConn5" maxlength="1" value="0">
-        <input class="jr-inp jr-inp-code" id="jrDst5" maxlength="3" value="">
-        <input class="jr-inp jr-inp-date" id="jrDate5" maxlength="5" value="">
-        <input class="jr-inp jr-inp-time" id="jrTime5" maxlength="7" value="/¥-">
-        <input class="jr-inp jr-inp-cxr" id="jrCxr5" maxlength="5" value="/ /">
-        <input class="jr-inp jr-inp-1" id="jrCabin5" maxlength="1" value="Y">
+        <input class="jr-inp" style="width: 24px;" id="jrConn5" maxlength="1" value="0">
+        <input class="jr-inp" style="width: 44px;" id="jrDst5" maxlength="3" value="">
+        <input class="jr-inp" style="width: 58px;" id="jrDate5" maxlength="5" value="">
+        <input class="jr-inp" style="width: 78px;" id="jrTime5" maxlength="7" value="/¥-">
+        <input class="jr-inp" style="width: 56px;" id="jrCxr5" maxlength="5" value="/ /">
+        <input class="jr-inp" style="width: 24px;" id="jrCabin5" maxlength="1" value="Y">
       </div>
       <!-- Leg 6 -->
       <div class="jr-leg-row">
         <span class="leg-idx">6</span>
-        <input class="jr-inp jr-inp-1" id="jrConn6" maxlength="1" value="0">
-        <input class="jr-inp jr-inp-code" id="jrDst6" maxlength="3" value="">
-        <input class="jr-inp jr-inp-date" id="jrDate6" maxlength="5" value="">
-        <input class="jr-inp jr-inp-time" id="jrTime6" maxlength="7" value="/¥-">
-        <input class="jr-inp jr-inp-cxr" id="jrCxr6" maxlength="5" value="/ /">
-        <input class="jr-inp jr-inp-1" id="jrCabin6" maxlength="1" value="Y">
+        <input class="jr-inp" style="width: 24px;" id="jrConn6" maxlength="1" value="0">
+        <input class="jr-inp" style="width: 44px;" id="jrDst6" maxlength="3" value="">
+        <input class="jr-inp" style="width: 58px;" id="jrDate6" maxlength="5" value="">
+        <input class="jr-inp" style="width: 78px;" id="jrTime6" maxlength="7" value="/¥-">
+        <input class="jr-inp" style="width: 56px;" id="jrCxr6" maxlength="5" value="/ /">
+        <input class="jr-inp" style="width: 24px;" id="jrCabin6" maxlength="1" value="Y">
       </div>
     </div>
 
-    <div class="jr-row jr-row-more">
-      <span class="jr-txt">MORE CITIES</span>
-      <input class="jr-inp jr-inp-code" id="jrMoreCities" maxlength="3" value="">
-      <span class="jr-txt" style="margin-left:auto;">ONLINE SERVICE ONLY</span>
-      <input class="jr-inp jr-inp-1" id="jrOnlineOnly" maxlength="1" value="N">
+    <div class="jr-row" style="margin-top: 4px;">
+      <span>MORE CITIES</span>
+      <input class="jr-inp" style="width: 44px; margin-left: 6px;" id="jrMoreCities" maxlength="3" value="">
+      <span style="margin-left: 80px;">ONLINE SERVICE ONLY</span>
+      <input class="jr-inp" style="width: 24px; margin-left: 6px;" id="jrOnlineOnly" maxlength="1" value="N">
     </div>
 
     <div class="jr-dash-line">--------------------------------------------------------------------------------</div>
 
-    <div class="jr-row jr-row-rules">
-      <span class="jr-txt">MIN/MAX STAY</span>
-      <input class="jr-inp jr-inp-1" id="jrMinStay" maxlength="1" value="Y">
-      <span class="jr-txt">REFUND/PEN</span>
-      <input class="jr-inp jr-inp-1" id="jrRefund" maxlength="1" value="Y">
-      <span class="jr-txt">RES/TKT</span>
-      <input class="jr-inp jr-inp-1" id="jrResTkt" maxlength="1" value="Y">
-      <span class="jr-txt">JUMP</span>
-      <input class="jr-inp jr-inp-1" id="jrJump" maxlength="1" value="">
+    <div class="jr-row">
+      <span>MIN/MAX STAY</span>
+      <input class="jr-inp" style="width: 24px; margin-left: 4px;" id="jrMinStay" maxlength="1" value="Y">
+      <span style="margin-left: 16px;">REFUND/PEN</span>
+      <input class="jr-inp" style="width: 24px; margin-left: 4px;" id="jrRefund" maxlength="1" value="Y">
+      <span style="margin-left: 16px;">RES/TKT</span>
+      <input class="jr-inp" style="width: 24px; margin-left: 4px;" id="jrResTkt" maxlength="1" value="Y">
+      <span style="margin-left: 16px;">JUMP</span>
+      <input class="jr-inp" style="width: 24px; margin-left: 4px;" id="jrJump" maxlength="1" value="">
     </div>
 
-    <div class="jr-row jr-row-psgr">
-      <span class="jr-txt">PSGR</span>
-      <input class="jr-inp jr-inp-psgr" id="jrPsgr1" maxlength="4" value="1ADT">
-      <input class="jr-inp jr-inp-psgr" id="jrPsgr2" maxlength="4" value="">
-      <input class="jr-inp jr-inp-psgr" id="jrPsgr3" maxlength="4" value="">
-      <input class="jr-inp jr-inp-psgr" id="jrPsgr4" maxlength="4" value="">
-      <span class="jr-txt" style="margin-left:auto;">TKT DATE</span>
-      <input class="jr-inp jr-inp-date" id="jrTktDate" maxlength="5" value="${todayStr}">
+    <div class="jr-row">
+      <span style="width: 44px;">PSGR</span>
+      <input class="jr-inp" style="width: 54px;" id="jrPsgr1" maxlength="4" value="1ADT">
+      <input class="jr-inp" style="width: 44px;" id="jrPsgr2" maxlength="4" value="">
+      <input class="jr-inp" style="width: 44px;" id="jrPsgr3" maxlength="4" value="">
+      <input class="jr-inp" style="width: 44px;" id="jrPsgr4" maxlength="4" value="">
+      <span style="margin-left: 40px;">TKT DATE</span>
+      <input class="jr-inp" style="width: 58px; margin-left: 6px;" id="jrTktDate" maxlength="5" value="${todayStr}">
     </div>
 
-    <div class="jr-row jr-row-cxr">
-      <span class="jr-txt">NON-PREF CXR</span>
-      <input class="jr-inp jr-inp-cxr" id="jrNonPref" maxlength="5" value="/ /">
-      <span class="jr-txt">CORP ID</span>
-      <input class="jr-inp jr-inp-corp" id="jrCorpId" maxlength="8" value="">
-      <span class="jr-txt">PV</span>
-      <input class="jr-inp jr-inp-1" id="jrPv" maxlength="1" value="">
-      <span class="jr-txt">PL</span>
-      <input class="jr-inp jr-inp-1" id="jrPl" maxlength="1" value="">
+    <div class="jr-row">
+      <span>NON-PREF CXR</span>
+      <input class="jr-inp" style="width: 56px; margin-left: 4px;" id="jrNonPref" maxlength="5" value="/ /">
+      <span style="margin-left: 16px;">CORP ID</span>
+      <input class="jr-inp" style="width: 74px; margin-left: 4px;" id="jrCorpId" maxlength="8" value="">
+      <span style="margin-left: 16px;">PV</span>
+      <input class="jr-inp" style="width: 24px; margin-left: 4px;" id="jrPv" maxlength="1" value="">
+      <span style="margin-left: 16px;">PL</span>
+      <input class="jr-inp" style="width: 24px; margin-left: 4px;" id="jrPl" maxlength="1" value="">
     </div>
 
-    <div class="jr-row jr-row-tpr">
-      <span class="jr-txt">TPR</span>
-      <input class="jr-inp jr-inp-1" id="jrTpr" maxlength="1" value="N">
-      <span class="jr-txt">TPR ID</span>
-      <input class="jr-inp jr-inp-tprid" id="jrTprId" maxlength="16" value="">
-      <span class="jr-txt">XO</span>
-      <input class="jr-inp jr-inp-1" id="jrXo" maxlength="1" value="">
+    <div class="jr-row">
+      <span>TPR</span>
+      <input class="jr-inp" style="width: 24px; margin-left: 4px;" id="jrTpr" maxlength="1" value="N">
+      <span style="margin-left: 16px;">TPR ID</span>
+      <input class="jr-inp" style="width: 140px; margin-left: 4px;" id="jrTprId" maxlength="16" value="">
+      <span style="margin-left: 16px;">XO</span>
+      <input class="jr-inp" style="width: 24px; margin-left: 4px;" id="jrXo" maxlength="1" value="">
     </div>
 
-    <div class="jr-row jr-row-segments">
-      <span class="jr-txt">INSERT AFTER</span>
-      <input class="jr-inp jr-inp-1" id="jrInsertAfter" maxlength="2" value="">
-      <span class="jr-txt">OR DELETE FROM</span>
-      <input class="jr-inp jr-inp-1" id="jrDeleteFrom" maxlength="2" value="">
-      <span class="jr-txt">FOR</span>
-      <input class="jr-inp jr-inp-1" id="jrForSeg" maxlength="2" value="">
-      <span class="jr-txt">SEGMENTS.</span>
+    <div class="jr-row">
+      <span>INSERT AFTER</span>
+      <input class="jr-inp" style="width: 24px; margin-left: 4px;" id="jrInsertAfter" maxlength="2" value="">
+      <span style="margin-left: 10px;">OR DELETE FROM</span>
+      <input class="jr-inp" style="width: 24px; margin-left: 4px;" id="jrDeleteFrom" maxlength="2" value="">
+      <span style="margin-left: 10px;">FOR</span>
+      <input class="jr-inp" style="width: 24px; margin-left: 4px;" id="jrForSeg" maxlength="2" value="">
+      <span style="margin-left: 10px;">SEGMENTS.</span>
     </div>
   `;
 
   term.appendChild(wrap);
-  term.scrollTop = term.scrollHeight;
+  term.scrollTop = 0; // Keep at top
 
   // Auto focus ACTION input
   const act = document.getElementById('jrAction');
@@ -197,7 +200,7 @@ function cmdFareShopJR() {
     });
   }
 
-  // Handle Enter key across all JR inputs
+  // Handle Enter / Esc keys across all JR inputs
   wrap.querySelectorAll('.jr-inp').forEach(inp => {
     inp.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') {
