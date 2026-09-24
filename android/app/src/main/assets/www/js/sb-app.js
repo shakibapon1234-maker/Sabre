@@ -20,11 +20,15 @@ function selectWs(letter) {
    by typing HELP / ? in the terminal.
 --------------------------------------------------------------------- */
 const SB_HELP_ENTRIES = [
+  { cmd: "W/-DHAKA", desc: "Search airport code by city or airport name" },
+  { cmd: "W/-BANGLADESH", desc: "List training airports for a country" },
+  { cmd: "W/-COUNTRIES", desc: "Show ISO country-code list" },
   { cmd: "WPA MH", desc: "Select carrier for PQ fare load (airline name also accepted)" },
   { cmd: "PQ", desc: "Load fare for the carrier selected with WPA" },
   { cmd: "3PQ", desc: "Display the loaded PQ fare" },
+  { cmd: "120NOVDACBKK", desc: "Sabre availability — DDMMM + origin + destination" },
   { cmd: "W/-DAC", desc: "এয়ারপোর্ট/শহর কোড এনকোড-ডিকোড" },
-  { cmd: "1N25DECDACLHR", desc: "এভেইলিবিলিটি — DDMMM + ORG + DST" },
+  { cmd: "125DECDACLHR", desc: "এভেইলিবিলিটি — DDMMM + ORG + DST" },
   { cmd: "0Y1", desc: "সেল — ক্লাস + লাইন নম্বর (কানেকশন হলে ২ সেগমেন্ট বসবে)" },
   { cmd: "-RAHMAN/ANIS MR", desc: "নাম ফিল্ড (একাধিক প্যাসেঞ্জারের জন্য চেইন করে দিন)" },
   { cmd: "9DAC 01700000000-A", desc: "ফোন ফিল্ড" },
@@ -62,6 +66,47 @@ function sbUseHelpCmd(cmd) {
   sbCloseCommandHelper();
 }
 
+let sbSelectedHistoryIndex = -1;
+function sbOpenHistory() {
+  const modal = document.getElementById('sbHistoryModal');
+  const list = document.getElementById('sbHistoryList');
+  if (!modal || !list) return;
+  const entries = sbCommandHistory.slice().reverse();
+  sbSelectedHistoryIndex = entries.length ? 0 : -1;
+  list.innerHTML = entries.length
+    ? entries.map((command, index) => `<button type="button" class="sb-history-row${index === 0 ? ' selected' : ''}" data-index="${index}"><span>⌨</span>${command}</button>`).join('')
+    : '<div class="sb-history-empty">NO COMMAND HISTORY</div>';
+  list.querySelectorAll('.sb-history-row').forEach(row => row.addEventListener('click', () => {
+    sbSelectedHistoryIndex = Number(row.dataset.index);
+    list.querySelectorAll('.sb-history-row').forEach(item => item.classList.remove('selected'));
+    row.classList.add('selected');
+  }));
+  modal.classList.add('open');
+}
+function sbCloseHistory() { document.getElementById('sbHistoryModal')?.classList.remove('open'); }
+function sbUseHistory(sendNow) {
+  const entries = sbCommandHistory.slice().reverse();
+  const command = entries[sbSelectedHistoryIndex];
+  if (!command) return;
+  const input = document.getElementById('cmdInput');
+  input.value = command;
+  sbCloseHistory();
+  if (sendNow) sendCmd(); else input.focus();
+}
+
 document.getElementById('cmdInput').addEventListener('keydown', e => {
   if (e.key === 'Enter') sendCmd();
+  if (e.altKey && e.key === 'ArrowUp') { e.preventDefault(); sbRecallHistory(-1); }
+  if (e.altKey && e.key === 'ArrowDown') { e.preventDefault(); sbRecallHistory(1); }
 });
+document.getElementById('cmdInput').addEventListener('input', e => {
+  e.target.value = e.target.value.toUpperCase();
+});
+document.getElementById('historyBtn').addEventListener('click', sbOpenHistory);
+
+// Capture the Sabre-style Alt+Arrow recall shortcut at window level too.
+window.addEventListener('keydown', e => {
+  if (!e.altKey) return;
+  if (e.key === 'ArrowUp') { e.preventDefault(); sbRecallHistory(-1); }
+  if (e.key === 'ArrowDown') { e.preventDefault(); sbRecallHistory(1); }
+}, true);

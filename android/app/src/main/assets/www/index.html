@@ -189,6 +189,7 @@
     font-family:var(--font-mono);
     font-size:14px;
     letter-spacing:2px;
+    text-transform:uppercase;
     padding:10px 0;
   }
   .cmd-input-wrap input::placeholder{color:var(--text-faint);letter-spacing:2px;}
@@ -287,6 +288,25 @@
   .term-area .line-warn{color:#e8b95f;border-bottom:1px dashed rgba(255,255,255,0.22);padding:2px 0;}
   .term-area .line-echo{color:#8fd0f0;border-bottom:1px dashed rgba(255,255,255,0.22);padding:2px 0;}
   .term-area .line-display{color:var(--text-light);font-weight:700;border-bottom:1px dashed rgba(255,255,255,0.22);padding:2px 0;}
+  .term-area .sb-booking-status{color:#fff;font-family:var(--font-ui);font-size:22px;line-height:1.25;font-weight:800;letter-spacing:.2px;margin:14px 0 8px;}
+  .sb-avail-board{color:#e8edf5;font-family:var(--font-mono);margin-top:8px;min-width:900px;}
+  .sb-avail-header{padding:8px 10px 12px;border-bottom:1px solid #3a4656;color:#f1f3f6;font-size:15px;}
+  .sb-avail-row{display:grid;grid-template-columns:42px 54px 70px minmax(330px,1fr) 130px 170px 52px 38px;align-items:start;gap:8px;padding:14px 12px;border-bottom:1px dashed #3a4656;font-size:15px;line-height:1.55;}
+  .sb-avail-classes{display:flex;flex-wrap:wrap;gap:3px;}
+  .sb-class-bucket{font:inherit;color:#e8edf5;background:transparent;border:0;padding:0 2px;cursor:pointer;}
+  .sb-class-bucket:hover,.sb-class-bucket:focus{color:#35c6bb;text-decoration:underline;outline:none;}
+  .sb-avail-arrow{color:#fff;background:transparent;border:0;font-size:26px;line-height:18px;cursor:pointer;padding:0;}
+  .sb-avail-arrow:hover{color:#35c6bb;}
+  .sb-avail-eq small{display:block;color:#35c6bb;font-size:10px;white-space:nowrap;}
+  .sb-avail-board.sb-hold-locked .sb-class-bucket,.sb-avail-board.sb-hold-locked .sb-avail-arrow{pointer-events:none;opacity:.42;}
+  .sb-seat-hold{display:none;background:#f4f4f4;color:#252a31;font-family:var(--font-ui);border-bottom:1px solid #b7bcc4;}
+  .sb-seat-hold.open{display:block;}
+  .sb-flight-detail{padding:14px 16px;border-bottom:1px solid #c9cdd2;font-size:13px;}
+  .sb-hold-controls{display:flex;justify-content:flex-end;align-items:center;gap:20px;padding:14px 16px;font-size:14px;}
+  .sb-hold-controls label{display:flex;align-items:center;gap:8px;}
+  .sb-hold-controls select{min-width:82px;padding:8px;border:2px solid #b9bcc1;border-radius:4px;background:#fff;font-size:15px;}
+  .sb-hold-sell,.sb-hold-close{background:#202020;color:#fff;border:0;border-radius:4px;padding:10px 27px;font-weight:700;font-size:15px;cursor:pointer;}
+  .sb-hold-close{padding:10px 16px;}
 
   /* ===== Right side panel ===== */
   .side-panel{
@@ -367,6 +387,90 @@
     padding:10px 18px;border-top:1px solid var(--panel-border);
     color:var(--text-faint);font-size:11px;
   }
+  .sb-history-modal{width:600px;max-width:92vw;max-height:76vh;background:#f6f6f6;color:#24272b;border-radius:5px;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 12px 40px rgba(0,0,0,.45);}
+  .sb-history-title{text-align:center;font-size:21px;padding:16px;border-bottom:1px solid #c9c9c9;}
+  .sb-history-list{overflow-y:auto;min-height:160px;max-height:52vh;}
+  .sb-history-row{display:flex;align-items:center;gap:12px;width:100%;border:0;border-bottom:1px solid #d1d1d1;background:transparent;color:#25272b;padding:12px 28px;font-family:var(--font-mono);font-size:16px;text-align:left;cursor:pointer;}
+  .sb-history-row:hover,.sb-history-row.selected{background:#e2e7eb;}
+  .sb-history-row span{font-family:var(--font-ui);}
+  .sb-history-empty{padding:28px;text-align:center;color:#6d747b;}
+  .sb-history-actions{display:flex;justify-content:center;gap:26px;padding:14px;border-top:1px solid #c9c9c9;}
+  .sb-history-actions button{min-width:190px;padding:12px;border:2px solid #252525;border-radius:4px;background:#fff;color:#252525;font-size:16px;font-weight:700;cursor:pointer;}
+  .sb-history-actions button:last-child{background:#202020;color:#fff;}
+
+  /* ===== PF Keys modal ===== */
+  #sbPfModal{
+    position:fixed;inset:0;z-index:150;
+    background:#f0f2f4;flex-direction:column;
+    font-family:var(--font-ui);color:#1d2733;
+  }
+  .pf-topbar{
+    background:#e8eaed;padding:10px 18px;
+    border-bottom:1px solid #c9cdd2;
+    display:flex;align-items:center;justify-content:space-between;
+    flex-shrink:0;
+  }
+  .pf-topbar-title{font-size:15px;font-weight:700;color:#1d2733;}
+  .pf-close-btn{
+    background:transparent;border:0;font-size:20px;
+    cursor:pointer;color:#555;line-height:1;padding:2px 8px;border-radius:4px;
+  }
+  .pf-close-btn:hover{background:#d8dadd;}
+  .pf-body{
+    flex:1;overflow-y:auto;
+    padding:24px 28px 12px;
+    max-width:960px;width:100%;margin:0 auto;
+  }
+  .pf-body h2{margin:0 0 20px;font-size:18px;font-weight:700;}
+  .pf-form-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;}
+  .pf-form-group{display:flex;flex-direction:column;gap:6px;}
+  .pf-form-group label{font-size:12px;font-weight:600;color:#3a3a3a;}
+  .pf-form-group input,.pf-form-group textarea{
+    border:1px solid #b8c2cd;border-radius:4px;
+    padding:9px 11px;font-size:14px;font-family:var(--font-mono);
+    background:#fff;color:#1d2733;resize:vertical;
+  }
+  .pf-form-group input:focus,.pf-form-group textarea:focus{
+    outline:none;border-color:#13a3a0;
+  }
+  .pf-cmd-group{margin-bottom:12px;}
+  .pf-cmd-group label{display:block;font-size:12px;font-weight:600;color:#3a3a3a;margin-bottom:6px;}
+  .pf-cmd-group textarea{
+    width:100%;min-height:80px;border:1px solid #b8c2cd;border-radius:4px;
+    padding:9px 11px;font-size:14px;font-family:var(--font-mono);
+    background:#fff;color:#1d2733;resize:vertical;
+  }
+  .pf-add-enter{
+    margin-top:6px;background:transparent;border:1px solid #9aa0aa;
+    border-radius:4px;padding:5px 12px;font-size:12px;cursor:pointer;color:#3a3a3a;
+  }
+  .pf-add-enter:hover{background:#e2e5e8;}
+  .pf-actions{display:flex;justify-content:flex-end;gap:10px;margin-bottom:18px;}
+  .pf-btn-cancel{
+    padding:9px 22px;border:1px solid #9aa0aa;border-radius:4px;
+    background:#fff;color:#3a3a3a;font-size:14px;font-weight:600;cursor:pointer;
+  }
+  .pf-btn-cancel:hover{background:#e8eaed;}
+  .pf-btn-save{
+    padding:9px 22px;border:0;border-radius:4px;
+    background:#202020;color:#fff;font-size:14px;font-weight:700;cursor:pointer;
+  }
+  .pf-btn-save:hover{background:#0d817e;}
+  #sbPfKeyGrid{
+    background:#101418;flex-shrink:0;
+    padding:10px 12px 14px;border-top:2px solid #c9cdd2;
+  }
+  .pf-row{display:flex;gap:4px;margin-bottom:4px;overflow-x:auto;}
+  .pf-key-chip{
+    min-width:68px;flex:1;padding:6px 5px 5px;border-radius:3px;
+    background:#1e2530;border:1px solid #2d3748;
+    cursor:pointer;user-select:none;display:flex;flex-direction:column;
+    transition:background .12s;
+  }
+  .pf-key-chip:hover{background:#2b3547;}
+  .pf-key-chip.pf-selected{background:#0d5f5c;border-color:#13a3a0;}
+  .pf-chip-key{font-size:10px;color:#8992a3;font-weight:600;margin-bottom:2px;}
+  .pf-chip-lbl{font-size:11px;color:#eef0f3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 </style>
 </head>
 <body>
@@ -412,19 +516,44 @@
     </div>
     <button class="cmd-icon-btn" title="Expand">⤢</button>
     <button class="send-btn" onclick="sendCmd()">Send</button>
-    <button class="pill-btn" title="History">↺</button>
+    <button class="pill-btn" id="historyBtn" title="History">↺</button>
     <button class="pill-btn" onclick="sbLoadLessonPNR()">Load Lesson PNR</button>
     <button class="pill-btn" onclick="sbOpenCommandHelper()">🪄 Command Helper</button>
+    <button class="pill-btn" onclick="sbOpenPfKeys()">⌨ PF Keys</button>
   </div>
 
   <!-- Function key quick row -->
-  <div class="fkey-bar">
-    <div class="fkey-chip">F1. Abdullah;</div>
-    <div class="fkey-chip">F2. Contact</div>
-    <div class="fkey-chip">F3. Ctcm</div>
-    <div class="fkey-chip">F4. Ctce</div>
-    <div class="fkey-chip">F5. Printer</div>
-    <div class="fkey-more" onclick="togglePanel()">⋮</div>
+  <div class="fkey-bar" id="fkeyBar"><div class="fkey-more" onclick="sbOpenPfKeys()">⋮</div></div>
+
+  <!-- PF Keys modal -->
+  <div id="sbPfModal" style="display:none;">
+    <div class="pf-topbar">
+      <span class="pf-topbar-title">⌨ Edit PF Keys</span>
+      <button class="pf-close-btn" onclick="sbClosePfKeys()" title="Close">✕</button>
+    </div>
+    <div class="pf-body">
+      <h2>Edit PF Keys</h2>
+      <div class="pf-form-grid">
+        <div class="pf-form-group">
+          <label>PF Key label</label>
+          <input id="sbPfLabel" type="text" placeholder="e.g. Contact">
+        </div>
+        <div class="pf-form-group">
+          <label>Description</label>
+          <input id="sbPfDesc" type="text" placeholder="Describe what command does">
+        </div>
+      </div>
+      <div class="pf-cmd-group">
+        <label>Command</label>
+        <textarea id="sbPfCmd" rows="4" placeholder="Type Sabre command(s). Use *Enter to chain multiple commands."></textarea>
+        <button class="pf-add-enter" onclick="sbPfAddEnter()">Add *Enter</button>
+      </div>
+      <div class="pf-actions">
+        <button class="pf-btn-cancel" onclick="sbClosePfKeys()">Cancel</button>
+        <button class="pf-btn-save" id="sbPfSaveBtn" onclick="sbPfSaveKey()">Save</button>
+      </div>
+    </div>
+    <div id="sbPfKeyGrid"></div>
   </div>
 
   <!-- Main split: terminal + side panel -->
@@ -453,6 +582,18 @@
     স্বাধীন এডুকেশনাল ট্রেনিং টুল — Sabre Corporation-এর সাথে কোনো অ্যাফিলিয়েশন নেই। কোনো লাইভ GDS-এর সাথে কানেক্টেড না। · Wings Fly Aviation Academy
   </div>
 
+  <!-- Command history modal -->
+  <div class="sb-help-overlay" id="sbHistoryModal" onclick="if(event.target===this) sbCloseHistory()">
+    <div class="sb-history-modal">
+      <div class="sb-history-title">History</div>
+      <div class="sb-history-list" id="sbHistoryList"></div>
+      <div class="sb-history-actions">
+        <button type="button" onclick="sbUseHistory(true)">Send</button>
+        <button type="button" onclick="sbUseHistory(false)">Modify</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Command Helper modal -->
   <div class="sb-help-overlay" id="sbHelpModal" onclick="if(event.target===this) sbCloseCommandHelper()">
     <div class="sb-help-modal">
@@ -470,6 +611,7 @@
 <script src="js/sb-pnr.js"></script>
 <script src="js/sb-commands.js"></script>
 <script src="js/sb-app.js"></script>
+<script src="js/sb-pfkeys.js"></script>
 <script src="js/auth.js"></script>
 
 </body>

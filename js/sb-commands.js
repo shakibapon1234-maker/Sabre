@@ -174,14 +174,8 @@ function cmdSSR(raw) {
    by segment count and passenger count)
 --------------------------------------------------------------------- */
 function cmdPriceQuote() {
-  if (sbState.booked.length === 0) { sbWarn("NO SEGMENTS BOOKED - SELL A SEGMENT FIRST"); return; }
-  const pax = Math.max(sbState.names.length, 1);
-  const segMultiplier = Math.max(sbState.booked.length, 1);
-  const base = 14500 * segMultiplier * pax;
-  const tax = Math.round(base * 0.19);
-  sbState.fareQuote = { base, tax, total: base + tax, currency: "BDT", pax };
-  sbPrint(`FARE  BDT${base}  TAX BDT${tax}  TOTAL BDT${base + tax}` + (pax > 1 ? `  (${pax} PAX)` : ''));
-  sbPrint(`** THIS IS A SIMULATED TRAINING FARE — NOT LIVE PRICING **`, 'line-warn');
+  const carrier = (sbState.booked.length > 0 && sbState.booked[0].al) || "MH";
+  cmdWpa("WPA" + carrier);
 }
 
 /* ---------------------------------------------------------------------
@@ -198,6 +192,9 @@ function cmdEndTransaction(redisplay) {
     });
   }
   sbState.ended = true;
+  if (sbState.privateFare && sbState.pqPending) {
+    sbState.pqStoredInPNR = true;
+  }
   sbPrint('DIRECT CONNECT IN PROGRESS, PLEASE WAIT', 'line-pnr');
   sbPrint('', 'line-pnr');
   if (redisplay) {
@@ -221,9 +218,10 @@ function cmdDisplayName() {
 }
 
 /* ---------------------------------------------------------------------
-   WPA <AIRLINE> / PQ / 3PQ — carrier fare-load training flow
-   WPA accepts either a two-letter carrier code (WPA MH) or its name
-   (WPA MALAYSIA AIRLINES).  PQ loads the quote and 3PQ displays it.
+   WPA <AIRLINE> / *PQ / 3PQ — Sabre carrier fare pricing & PQ display
+   WPAMH, WPA MH, WPA <AIRLINE NAME> computes and displays the fare
+   quote (Screenshot 1) and stores PQ 1.
+   *PQ, *PQ1, 3PQ displays the stored PQ fare record (Screenshot 2).
 --------------------------------------------------------------------- */
 function sbFindAirline(query) {
   const value = query.trim().toUpperCase().replace(/\s+/g, ' ');
@@ -234,49 +232,148 @@ function sbFindAirline(query) {
   return matches.length === 1 ? matches[0] : null;
 }
 
+function sbGetFareForCarrier(carrierCode) {
+  const code = (carrierCode || 'MH').toUpperCase();
+  const isMH = code === 'MH';
+  const baseUsd = isMH ? 296 : 220 + ((code.charCodeAt(0) * 7 + (code.charCodeAt(1) || 65)) % 181);
+  const rate = 123.65;
+  const baseBdt = Math.round(baseUsd * rate);
+  const tax = isMH ? 14249 : Math.round(baseBdt * 0.389);
+  const total = baseBdt + tax;
+
+  const seg0 = sbState.booked[0] || {};
+  const origin = seg0.dep || 'DAC';
+  const dest = seg0.arr || 'KUL';
+  const flightNo = seg0.fn || '103';
+  const cls = seg0.cls || 'N';
+  const date = seg0.date || '20DEC';
+  const depTime = seg0.depT || '1230';
+  const fareBasis = isMH ? 'NBX0WBD' : `${cls}BX0WBD`;
+  const route = `${origin} ${code} ${dest} Q25.00 ${(baseUsd - 25).toFixed(2)}NUC${baseUsd.toFixed(2)}END ROE1.00`;
+
+  return {
+    carrier: code,
+    carrierName: SB_AIRLINES[code]?.name || `${code} AIRLINES`,
+    baseUsd,
+    rate,
+    baseBdt,
+    tax,
+    total,
+    fareBasis,
+    route,
+    origin,
+    dest,
+    flightNo,
+    cls,
+    date,
+    depTime,
+    loaded: true
+  };
+}
+
 function cmdWpa(raw) {
-  const airline = sbFindAirline(raw.replace(/^WPA\s+/, ''));
-  if (!airline) {
-    sbWarn('AIRLINE NOT FOUND - FORMAT: WPA <2-LETTER CODE OR AIRLINE NAME>  e.g. WPA MH');
-    return;
+  let carrier = "";
+  const clean = (raw || "").trim().toUpperCase();
+
+  if (clean.startsWith("WPA")) {
+    const after = clean.slice(3).trim();
+    if (after.length === 2) {
+      carrier = after;
+    } else if (after.length > 2) {
+      const found = sbFindAirline(after);
+      carrier = found ? found.code : after.slice(0, 2);
+    }
   }
-  sbState.privateFare = { carrier: airline.code, carrierName: airline.name, loaded: false };
-  sbPrint(`WPA ${airline.code} - ${airline.name} SELECTED`);
-  sbPrint('ENTER PQ TO LOAD FARE');
+
+  if (!carrier) {
+    if (sbState.booked.length > 0 && sbState.booked[0].al) {
+      carrier = sbState.booked[0].al;
+    } else {
+      carrier = "MH";
+    }
+  }
+
+  const fare = sbGetFareForCarrier(carrier);
+  sbState.privateFare = fare;
+  sbState.pqPriced = true;
+  sbState.pqPending = false;
+  sbState.pqStoredInPNR = false;
+  sbState.fareQuote = {
+    base: fare.baseBdt,
+    tax: fare.tax,
+    total: fare.total,
+    currency: "BDT",
+    pax: Math.max(sbState.names.length, 1)
+  };
+
+  // Exact Sabre Screenshot 1 output
+  sbPrint('');
+  sbPrint('          BASE FARE      EQUIV AMOUNT    TAXES/FEES/CHARGES');
+  sbPrint(`1-        USD${fare.baseUsd.toFixed(2)}          BDT${fare.baseBdt}             BDT${fare.tax}XT      BDT${fare.total}ADT           TOTAL:   BDT${fare.total}`);
+  sbPrint('     XT       500BD            4000UT                25000W             447E5');
+  sbPrint('             4328YQ            1237P8                1237P7');
+  sbPrint(`             ${fare.baseUsd.toFixed(2)}             ${fare.baseBdt}                 ${fare.tax}`);
+  sbPrint('');
+  sbPrint(`ADT-1     ${fare.fareBasis}`);
+  sbPrint(fare.route);
+  sbPrint(`RATE USED 1USD-${fare.rate.toFixed(2)}BDT`);
+  sbPrint('NONEND-SUBJ TO PENALTY');
+  sbPrint(`VALIDATING CARRIER SPECIFIED - ${fare.carrier}`);
+  sbPrint('BRANDED FARE /BASIC-BASIC');
 }
 
 function cmdPq() {
-  if (!sbState.privateFare?.carrier) {
-    sbWarn('NO VALIDATING CARRIER SELECTED - ENTER WPA <AIRLINE> FIRST');
+  if (!sbState.privateFare || !sbState.pqPriced) {
+    sbWarn("NO FARE QUOTE ON FILE - ENTER WPA <AIRLINE> FIRST");
     return;
   }
-  const isMH = sbState.privateFare.carrier === 'MH';
-  const baseUsd = isMH ? 296 : 220 + ((sbState.privateFare.carrier.charCodeAt(0) * 7 + sbState.privateFare.carrier.charCodeAt(1)) % 181);
-  const rate = 123.65;
-  const baseBdt = Math.ceil(baseUsd * rate);
-  const tax = isMH ? 14249 : Math.round(baseBdt * 0.39);
-  sbState.privateFare = {
-    ...sbState.privateFare, loaded: true, baseUsd, rate, baseBdt, tax,
-    total: baseBdt + tax, fareBasis: isMH ? 'NBX0WBD' : `${sbState.privateFare.carrier}X0WBD`,
-    route: isMH ? 'DAC MH KUL' : 'DAC ' + sbState.privateFare.carrier + ' KUL'
-  };
-  sbPrint(`PQ FARE LOADED FOR ${sbState.privateFare.carrier} - ${sbState.privateFare.carrierName}`);
-  sbPrint('ENTER 3PQ TO DISPLAY FARE LOAD');
+  sbState.pqPending = true;
+  sbPrint("*");
 }
 
 function cmdDisplayPq() {
+  if (!sbState.privateFare || !sbState.pqStoredInPNR) {
+    sbWarn("NO FARE RECORD EXISTS");
+    return;
+  }
+
+  if (!sbState.privateFare) {
+    const carrier = (sbState.booked[0] && sbState.booked[0].al) || 'MH';
+    sbState.privateFare = sbGetFareForCarrier(carrier);
+    sbState.fareQuote = {
+      base: sbState.privateFare.baseBdt,
+      tax: sbState.privateFare.tax,
+      total: sbState.privateFare.total,
+      currency: "BDT",
+      pax: Math.max(sbState.names.length, 1)
+    };
+  }
+
   const fare = sbState.privateFare;
-  if (!fare?.loaded) { sbWarn('NO PQ FARE LOAD ON FILE - ENTER WPA <AIRLINE>, THEN PQ'); return; }
-  sbPrint(`WPA${fare.carrier}«`, 'line-display');
+  const paxName = sbState.names.length > 0
+    ? (sbState.names[0].surname ? `${sbState.names[0].surname}/${sbState.names[0].first} ${sbState.names[0].title}`.trim() : sbState.names[0].raw)
+    : 'APON/SHAKIB MR';
+
+  // Exact Sabre Screenshot 2 output
   sbPrint('');
-  sbPrint(`1-        BASE FARE       EQUIV AMOUNT       TAXES/FEES/CHARGES                 TOTAL`);
-  sbPrint(`          USD${fare.baseUsd.toFixed(2).padEnd(11)} BDT${fare.baseBdt.toString().padEnd(12)} BDT${fare.tax}XT                  BDT${fare.total}`);
-  sbPrint(`ADT-1     ${fare.fareBasis}`);
-  sbPrint(`${fare.route} Q25.00 NUC${fare.baseUsd.toFixed(2)}END ROE1.00`);
-  sbPrint(`RATE USED 1USD-${fare.rate.toFixed(2)}BDT`);
+  sbPrint('FARE RECORD-ADT-AUTO PRICED      -ATPC');
+  sbPrint('PQ 1                                    INPUT PTC - ADT');
+  sbPrint('');
+  sbPrint(` 1.1${paxName}`);
+  sbPrint(`VALIDATING CARRIER - ${fare.carrier}`);
+  sbPrint(` 1 O${fare.origin} ${fare.carrier} ${fare.flightNo}${fare.cls} ${fare.date} ${fare.depTime}  ${fare.fareBasis}       OK ${fare.date}${fare.date}25K`);
+  sbPrint(`   ${fare.dest}`);
+  sbPrint('');
+  sbPrint('      BASE FARE       EQUIV AMT    TAXES/FEES/CHARGES       TOTAL');
+  sbPrint(`      USD${fare.baseUsd.toFixed(2)}        BDT${fare.baseBdt}              ${fare.tax}XT     BDT${fare.total}`);
+  sbPrint(' XT       500BD          4000UT              25000W         447E5');
+  sbPrint('         4328YQ          1237P8              1237P7');
+  sbPrint(fare.route);
+  sbPrint('');
   sbPrint('NONEND-SUBJ TO PENALTY');
-  sbPrint(`VALIDATING CARRIER SPECIFIED - ${fare.carrier} ${fare.carrierName}`);
-  sbPrint('BRANDED FARE /BASIC-BASIC');
+  sbPrint('');
+  sbPrint('PRICING TRAILER MSG');
+  sbPrint(`VALIDATING CARRIER SPECIFIED - ${fare.carrier}`);
 }
 
 function cmdDisplayItinerary() {
@@ -382,10 +479,9 @@ function sbParse(raw) {
   const upper = cmd.toUpperCase();
 
   if (/^W\/-[A-Z][A-Z .'-]*$/.test(upper)) return cmdEncodeDecode(upper.slice(3));
-  if (/^WPA\s+.+$/.test(upper)) return cmdWpa(upper);
-  if (/^PQ$/.test(upper)) return cmdPq();
-  if (/^3PQ$/.test(upper)) return cmdDisplayPq();
-  if (/^1\d{2}[A-Z]{3}[A-Z]{6}$/.test(upper)) return cmdAvailability(upper);
+  if (/^WPA(?:\s*([A-Z0-9]{2})|\s+(.+))?$/.test(upper) || /^WP$/i.test(upper)) return cmdWpa(upper);
+  if (/^\*PQ(?:\s*\d+)?$|^\*PQS$|^3PQ$|^PQ$/i.test(upper)) return cmdDisplayPq();
+    if (/^1\d{2}[A-Z]{3}[A-Z]{6}$/.test(upper)) return cmdAvailability(upper);
   if (/^0[A-Z]\d+$/.test(upper)) return cmdSell(upper);
   if (/^-[A-Z]/.test(upper)) return cmdName(upper);
   if (/^9/.test(upper)) return cmdPhone(upper);
