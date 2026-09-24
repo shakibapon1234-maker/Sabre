@@ -441,10 +441,11 @@
     background:#fff;color:#1d2733;resize:vertical;
   }
   .pf-add-enter{
-    margin-top:6px;background:transparent;border:1px solid #9aa0aa;
-    border-radius:4px;padding:5px 12px;font-size:12px;cursor:pointer;color:#3a3a3a;
+    margin-top:8px;background:transparent;border:0;
+    color:#0e7490;font-size:13px;font-weight:600;cursor:pointer;padding:0;
+    text-align:left;display:inline-block;
   }
-  .pf-add-enter:hover{background:#e2e5e8;}
+  .pf-add-enter:hover{text-decoration:underline;color:#085b73;}
   .pf-actions{display:flex;justify-content:flex-end;gap:10px;margin-bottom:18px;}
   .pf-btn-cancel{
     padding:9px 22px;border:1px solid #9aa0aa;border-radius:4px;
@@ -546,7 +547,7 @@
       <div class="pf-cmd-group">
         <label>Command</label>
         <textarea id="sbPfCmd" rows="4" placeholder="Type Sabre command(s). Use *Enter to chain multiple commands."></textarea>
-        <button class="pf-add-enter" onclick="sbPfAddEnter()">Add *Enter</button>
+        <button class="pf-add-enter" type="button" onclick="sbPfAddEnter()">Add ^Enter</button>
       </div>
       <div class="pf-actions">
         <button class="pf-btn-cancel" onclick="sbClosePfKeys()">Cancel</button>

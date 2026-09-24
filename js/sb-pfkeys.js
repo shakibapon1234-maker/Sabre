@@ -1,7 +1,7 @@
 /* =========================================================
    sb-pfkeys.js  –  Sabre PF Keys (macro/shortcut) system
    Slots: F1–F24, 0–9, A–Z  (60 total)
-   Commands chained with *Enter separator
+   Commands chained with ^E delimiter (Add ^Enter or Enter key)
    ========================================================= */
 
 const SB_PF_STORAGE = 'sabre_pfkeys_v1';
@@ -14,6 +14,7 @@ const SB_PF_SLOTS = [
 ];
 
 let sbPfCurrentKey = 'f1';
+let sbPfEventsInitialized = false;
 
 /* ---------- storage helpers ---------- */
 function sbPfLoad() {
@@ -26,12 +27,15 @@ function sbPfSave(data) {
 
 /* ---------- open / close ---------- */
 function sbOpenPfKeys() {
-  document.getElementById('sbPfModal').style.display = 'flex';
+  const modal = document.getElementById('sbPfModal');
+  if (modal) modal.style.display = 'flex';
+  sbPfInitEvents();
   sbPfRenderKeyboard();
   sbPfSelectKey(sbPfCurrentKey || 'f1');
 }
 function sbClosePfKeys() {
-  document.getElementById('sbPfModal').style.display = 'none';
+  const modal = document.getElementById('sbPfModal');
+  if (modal) modal.style.display = 'none';
 }
 
 /* ---------- select a key for editing ---------- */
@@ -39,9 +43,12 @@ function sbPfSelectKey(id) {
   sbPfCurrentKey = id;
   const data = sbPfLoad();
   const entry = data[id] || {};
-  document.getElementById('sbPfLabel').value = entry.label || '';
-  document.getElementById('sbPfDesc').value  = entry.desc  || '';
-  document.getElementById('sbPfCmd').value   = entry.cmd   || '';
+  const lbl = document.getElementById('sbPfLabel');
+  const desc = document.getElementById('sbPfDesc');
+  const cmd = document.getElementById('sbPfCmd');
+  if (lbl) lbl.value = entry.label || '';
+  if (desc) desc.value = entry.desc || '';
+  if (cmd) cmd.value = entry.cmd || '';
   document.querySelectorAll('.pf-key-chip').forEach(el =>
     el.classList.toggle('pf-selected', el.dataset.id === id)
   );
@@ -51,6 +58,7 @@ function sbPfSelectKey(id) {
 function sbPfRenderKeyboard() {
   const data = sbPfLoad();
   const grid = document.getElementById('sbPfKeyGrid');
+  if (!grid) return;
   grid.innerHTML = '';
 
   // F1–F12
@@ -87,15 +95,29 @@ function escHtml(s) {
   return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 
-/* ---------- Add *Enter button ---------- */
+/* ---------- Add ^Enter button / Enter key handler ---------- */
 function sbPfAddEnter() {
   const ta = document.getElementById('sbPfCmd');
-  const pos = ta.selectionStart;
+  if (!ta) return;
+  const pos = ta.selectionStart ?? ta.value.length;
   const val = ta.value;
-  const ins = '*Enter\n';
+  const ins = '^E';
   ta.value = val.slice(0, pos) + ins + val.slice(pos);
   ta.selectionStart = ta.selectionEnd = pos + ins.length;
   ta.focus();
+}
+
+function sbPfInitEvents() {
+  if (sbPfEventsInitialized) return;
+  const ta = document.getElementById('sbPfCmd');
+  if (!ta) return;
+  ta.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      sbPfAddEnter();
+    }
+  });
+  sbPfEventsInitialized = true;
 }
 
 /* ---------- Save current key ---------- */
@@ -114,8 +136,10 @@ function sbPfSaveKey() {
   sbPfRenderKeyboard();
   sbPfUpdateFkeyBar();
   const btn = document.getElementById('sbPfSaveBtn');
-  btn.textContent = 'Saved ✓';
-  setTimeout(() => { btn.textContent = 'Save'; }, 1400);
+  if (btn) {
+    btn.textContent = 'Saved ✓';
+    setTimeout(() => { btn.textContent = 'Save'; }, 1400);
+  }
 }
 
 /* ---------- Run a PF key (execute its command chain) ---------- */
@@ -124,17 +148,17 @@ async function sbPfRunKey(id) {
   const entry = data[id];
   if (!entry || !entry.cmd.trim()) return;
 
-  // Split on *Enter (with optional surrounding whitespace/newlines)
+  // Split by ^E, ^Enter, or *Enter delimiter
   const commands = entry.cmd
-    .split(/\*Enter[\r\n]*/i)
+    .split(/\^E|\^Enter|\*Enter|[\r\n]+/i)
     .map(c => c.trim())
     .filter(Boolean);
 
   for (const cmd of commands) {
     if (typeof sbEcho  === 'function') sbEcho(cmd);
     if (typeof sbParse === 'function') sbParse(cmd);
-    // Small delay between chained commands so terminal can render
-    await new Promise(r => setTimeout(r, 350));
+    // Delay between chained commands so terminal can render
+    await new Promise(r => setTimeout(r, 400));
   }
 }
 
@@ -144,10 +168,8 @@ function sbPfUpdateFkeyBar() {
   if (!bar) return;
   const data = sbPfLoad();
 
-  // Clear existing chips (keep the ⋮ more button placeholder)
   bar.innerHTML = '';
 
-  // Show the first 6 F-keys that have a label assigned
   let shown = 0;
   for (const slot of SB_PF_SLOTS) {
     if (shown >= 6) break;
@@ -162,7 +184,6 @@ function sbPfUpdateFkeyBar() {
     shown++;
   }
 
-  // ⋮ more button always at end
   const more = document.createElement('div');
   more.className = 'fkey-more';
   more.textContent = '⋮';
@@ -173,5 +194,6 @@ function sbPfUpdateFkeyBar() {
 
 /* ---------- init on load ---------- */
 window.addEventListener('DOMContentLoaded', () => {
+  sbPfInitEvents();
   sbPfUpdateFkeyBar();
 });
