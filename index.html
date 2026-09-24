@@ -472,48 +472,60 @@
   .pf-key-chip.pf-selected{background:#0d5f5c;border-color:#13a3a0;}
   .pf-chip-key{font-size:10px;color:#8992a3;font-weight:600;margin-bottom:2px;}
   .pf-chip-lbl{font-size:11px;color:#eef0f3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-  /* ===== Sabre JR - CREATE Fare Shop mask ===== */
+  /* ===== Sabre JR - CREATE Fare Shop mask (Ultra-compact) ===== */
+  .cmd-text-btn {
+    background: transparent;
+    border: none;
+    color: #cfd6e0;
+    font-size: 13px;
+    font-weight: 600;
+    padding: 0 12px;
+    height: 36px;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+  .cmd-text-btn:hover { color: #ffffff; }
+
   .sb-jr-mask {
-    background: #17212e;
+    background: transparent;
     color: #cfd6e0;
     font-family: var(--font-mono);
-    padding: 14px 18px;
-    border-radius: 4px;
-    border: 1px solid #28374d;
-    margin: 8px 0;
-    line-height: 1.5;
+    padding: 0;
+    margin: 2px 0 6px;
+    line-height: 1.25;
+    font-size: 12.5px;
   }
-  .jr-header-line { font-weight: 700; font-size: 14px; color: #eef2f6; margin-bottom: 4px; }
-  .jr-dash-line { color: #43546b; margin: 6px 0; overflow: hidden; white-space: nowrap; }
-  .jr-row { display: flex; align-items: center; gap: 8px; margin: 6px 0; flex-wrap: wrap; font-size: 13px; }
-  .jr-lbl { font-weight: 700; color: #fff; min-width: 60px; }
-  .jr-txt { color: #cfd6e0; }
+  .jr-header-line { font-weight: 700; font-size: 13px; color: #eef2f6; margin: 2px 0; }
+  .jr-dash-line { color: #4a5a73; margin: 2px 0; overflow: hidden; white-space: nowrap; user-select: none; }
+  .jr-row { display: flex; align-items: center; gap: 6px; margin: 2px 0; white-space: nowrap; font-size: 12.5px; }
+  .jr-lbl { font-weight: 700; color: #fff; min-width: 50px; }
+  .jr-txt { color: #cfd6e0; font-size: 12px; }
   .jr-inp {
-    background: #ffffff; color: #111827; border: 1px solid #cbd5e1; border-radius: 4px;
-    font-family: var(--font-mono); font-size: 13px; font-weight: 700; text-align: center;
-    height: 28px; box-sizing: border-box; padding: 2px 4px; outline: none;
+    background: #ffffff; color: #111827; border: 1px solid #ffffff; border-radius: 2px;
+    font-family: var(--font-mono); font-size: 12px; font-weight: 700; text-align: center;
+    height: 20px; box-sizing: border-box; padding: 0 2px; outline: none; margin: 0 1px;
   }
-  .jr-inp:focus { border-color: #0d9488; box-shadow: 0 0 0 2px rgba(13, 148, 136, 0.3); }
-  .jr-inp-1 { width: 34px; }
-  .jr-inp-action { width: 36px; text-transform: uppercase; }
-  .jr-inp-code { width: 56px; text-transform: uppercase; }
-  .jr-inp-date { width: 70px; text-transform: uppercase; }
-  .jr-inp-time { width: 90px; }
-  .jr-inp-cxr { width: 68px; text-transform: uppercase; }
-  .jr-inp-psgr { width: 58px; text-transform: uppercase; }
-  .jr-inp-corp { width: 88px; }
-  .jr-inp-tprid { width: 140px; }
-  .jr-tbl-header { display: flex; align-items: center; gap: 8px; margin: 12px 0 6px; font-size: 12px; font-weight: 700; color: #94a3b8; }
+  .jr-inp:focus { border-color: #0d9488; background: #f0fdfa; box-shadow: 0 0 0 1px #0d9488; }
+  .jr-inp-1 { width: 26px; }
+  .jr-inp-action { width: 30px; text-transform: uppercase; }
+  .jr-inp-code { width: 44px; text-transform: uppercase; }
+  .jr-inp-date { width: 56px; text-transform: uppercase; }
+  .jr-inp-time { width: 76px; }
+  .jr-inp-cxr { width: 56px; text-transform: uppercase; }
+  .jr-inp-psgr { width: 48px; text-transform: uppercase; }
+  .jr-inp-corp { width: 72px; }
+  .jr-inp-tprid { width: 120px; }
+  .jr-tbl-header { display: flex; align-items: center; gap: 6px; margin: 3px 0 1px; font-size: 11.5px; font-weight: 700; color: #8b99ad; }
   .col-head { display: inline-block; }
-  .col-from { width: 44px; }
-  .col-from-box { margin-right: 14px; }
-  .col-date { width: 70px; margin-left: 10px; }
-  .col-time { width: 90px; }
-  .col-cxr { width: 68px; }
-  .col-cabin { width: 34px; }
-  .jr-legs { display: flex; flex-direction: column; gap: 5px; margin-bottom: 8px; }
-  .jr-leg-row { display: flex; align-items: center; gap: 8px; }
-  .leg-idx { width: 14px; color: #94a3b8; font-weight: 700; font-size: 13px; }
+  .col-from { width: 38px; }
+  .col-from-box { margin-right: 12px; }
+  .col-date { width: 56px; margin-left: 6px; }
+  .col-time { width: 76px; }
+  .col-cxr { width: 56px; }
+  .col-cabin { width: 26px; }
+  .jr-legs { display: flex; flex-direction: column; gap: 2px; margin-bottom: 2px; }
+  .jr-leg-row { display: flex; align-items: center; gap: 6px; }
+  .leg-idx { width: 12px; color: #8b99ad; font-weight: 700; font-size: 12px; }
 
 </style>
 </head>
@@ -559,17 +571,13 @@
       <input type="text" id="cmdInput" placeholder="TYPE COMMAND HERE" autocomplete="off">
     </div>
     <button class="cmd-icon-btn" title="Expand">⤢</button>
-    <button class="pill-btn" onclick="document.getElementById('cmdInput').value=''; if(typeof sbCloseJrMask==='function') sbCloseJrMask();">Clear</button>
-    <button class="pill-btn" onclick="if(typeof sbCloseJrMask==='function') sbCloseJrMask();">Esc</button>
+    <button class="cmd-text-btn" type="button" onclick="document.getElementById('cmdInput').value=''; if(typeof sbCloseJrMask==='function') sbCloseJrMask();">Clear</button>
+    <button class="cmd-text-btn" type="button" onclick="if(typeof sbCloseJrMask==='function') sbCloseJrMask();">Esc</button>
     <button class="send-btn" onclick="sendCmd()">Send</button>
     <button class="pill-btn" id="historyBtn" title="History">↺</button>
-    <button class="pill-btn" onclick="sbLoadLessonPNR()">Load Lesson PNR</button>
-    <button class="pill-btn" onclick="sbOpenCommandHelper()">🪄 Command Helper</button>
     <button class="pill-btn" onclick="sbOpenPfKeys()">⌨ PF Keys</button>
-    <button class="pill-btn" onclick="if(typeof cmdFareShopJR==='function') cmdFareShopJR();">🛒 Fare Shop (JR)</button>
-  </div>
-
-  <!-- Function key quick row -->
+    <button class="pill-btn" onclick="sbOpenCommandHelper()">🪄 Command Helper</button>
+  </div><!-- Function key quick row -->
   <div class="fkey-bar" id="fkeyBar"><div class="fkey-more" onclick="sbOpenPfKeys()">⋮</div></div>
 
   <!-- PF Keys modal -->
