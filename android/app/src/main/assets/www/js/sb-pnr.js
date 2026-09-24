@@ -29,12 +29,32 @@ function sbEmptyState() {
   };
 }
 let sbState = sbEmptyState();
-let sbCommandHistory = [];
-let sbHistoryIndex = -1;
+const SB_HISTORY_KEY = 'sabre_command_history';
+
+function sbLoadCommandHistory() {
+  try {
+    const saved = localStorage.getItem(SB_HISTORY_KEY);
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (Array.isArray(parsed)) return parsed;
+    }
+  } catch (e) {}
+  return [];
+}
+
+let sbCommandHistory = sbLoadCommandHistory();
+let sbHistoryIndex = sbCommandHistory.length;
 
 function sbRememberCommand(command) {
+  if (!command) return;
   sbCommandHistory.push(command);
+  if (sbCommandHistory.length > 500) {
+    sbCommandHistory = sbCommandHistory.slice(-500);
+  }
   sbHistoryIndex = sbCommandHistory.length;
+  try {
+    localStorage.setItem(SB_HISTORY_KEY, JSON.stringify(sbCommandHistory));
+  } catch (e) {}
 }
 
 function sbRecallHistory(direction) {

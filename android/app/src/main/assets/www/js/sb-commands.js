@@ -124,8 +124,8 @@ function cmdName(raw) {
    9<CITY><NUMBER>-<TYPE>  — phone field
 --------------------------------------------------------------------- */
 function cmdPhone(raw) {
-  const body = raw.replace(/^9/, '').trim();
-  if (!body) { sbWarn("FORMAT: 9DAC 01XXXXXXXXX-A"); return; }
+  const body = raw.replace(/^9\s*/, '').trim();
+  if (!body) { sbWarn("FORMAT: 9 <PHONE/AGENCY/CONTACT DETAILS>"); return; }
   sbState.phones.push({ raw: body.toUpperCase() });
   sbPrint('*');
 }
@@ -134,7 +134,7 @@ function cmdPhone(raw) {
    6<NAME>  — received from field
 --------------------------------------------------------------------- */
 function cmdReceivedFrom(raw) {
-  const body = raw.replace(/^6/, '').trim();
+  const body = raw.replace(/^6\s*/, '').trim();
   if (!body) { sbWarn("FORMAT: 6<AGENT/PASSENGER NAME>"); return; }
   sbState.receivedFrom = body.toUpperCase();
   sbPrint('*');
@@ -303,10 +303,10 @@ function sbParse(raw) {
   if (/^1\d{2}[A-Z]{3}[A-Z]{6}$/.test(upper)) return cmdAvailability(upper);
   if (/^0[A-Z]\d+$/.test(upper)) return cmdSell(upper);
   if (/^-[A-Z]/.test(upper)) return cmdName(upper);
-  if (/^9[A-Z0-9]/.test(upper)) return cmdPhone(upper);
-  if (/^6[A-Z]/.test(upper)) return cmdReceivedFrom(upper);
-  if (/^7[A-Z0-9]/.test(upper)) return cmdTicketingArrangement(upper);
-  if (/^3[A-Z0-9]/.test(upper)) return cmdSSR(upper);
+  if (/^9/.test(upper)) return cmdPhone(upper);
+  if (/^6/.test(upper)) return cmdReceivedFrom(upper);
+  if (/^7/.test(upper)) return cmdTicketingArrangement(upper);
+  if (/^3/.test(upper)) return cmdSSR(upper);
   if (/^WPNCB$|^WPNI$/.test(upper)) return cmdPriceQuote();
   if (/^ER?$/.test(upper)) return cmdEndTransaction(upper === "ER");
   if (/^\*-$|^\*-ALL$|^\*N$/.test(upper)) return cmdDisplayName();
@@ -318,7 +318,8 @@ function sbParse(raw) {
   if (/^\*A$|^\*R$|^\*$/.test(upper)) return cmdRedisplay();
   if (/^\*[A-Z0-9]{5,6}$/.test(upper)) return cmdRetrieve(upper);
   if (/^WTP?$/.test(upper)) return cmdIssueTicket();
-  if (/^XI$/.test(upper)) return cmdIgnore();
+  if (/^IR$/.test(upper)) return cmdRedisplay();
+  if (/^I$|^IG$|^XI$/.test(upper)) return cmdIgnore();
   if (/^HELP$|^\?$/.test(upper)) return cmdHelp();
 
   sbWarn(`FORMAT INVALID - ${upper} NOT RECOGNIZED (PHASE 1 COMMAND SET) — TYPE HELP FOR COMMAND LIST`);
