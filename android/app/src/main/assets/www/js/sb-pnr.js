@@ -29,6 +29,21 @@ function sbEmptyState() {
   };
 }
 let sbState = sbEmptyState();
+let sbCommandHistory = [];
+let sbHistoryIndex = -1;
+
+function sbRememberCommand(command) {
+  sbCommandHistory.push(command);
+  sbHistoryIndex = sbCommandHistory.length;
+}
+
+function sbRecallHistory(direction) {
+  const input = document.getElementById('cmdInput');
+  if (!input || sbCommandHistory.length === 0) return;
+  sbHistoryIndex = Math.max(0, Math.min(sbCommandHistory.length - 1, sbHistoryIndex + direction));
+  input.value = sbCommandHistory[sbHistoryIndex];
+  input.focus();
+}
 
 /* ---------------------------------------------------------------------
    RESET SESSION — used by the terminal shell and the Electron menu
@@ -70,19 +85,106 @@ function sbEcho(cmd) {
   if (term.querySelector('.ph')) term.innerHTML = '';
   const echo = document.createElement('div');
   echo.className = 'line-echo';
-  echo.textContent = cmd.toUpperCase();
+  const text = cmd.toUpperCase().trim();
+  echo.textContent = text.endsWith('«') ? text : (text + '«');
   term.appendChild(echo);
 }
 function sbPrint(text, cls) {
   const term = document.getElementById('termArea');
   const line = document.createElement('div');
-  line.className = cls || 'line-ok';
+  line.className = cls || (text === '*' ? 'line-display' : 'line-ok');
   line.textContent = text;
   term.appendChild(line);
   term.appendChild(document.createElement('br'));
   term.scrollTop = term.scrollHeight;
 }
 function sbWarn(text) { sbPrint(text, 'line-warn'); }
+
+/* ---------------------------------------------------------------------
+   INTERACTIVE AVAILABILITY — arrow or any booking-class bucket opens a
+   Sabre-style seat-hold panel for that flight.
+--------------------------------------------------------------------- */
+function sbRenderAvailabilityBoard(options, date) {
+  const term = document.getElementById('termArea');
+  if (!term) return;
+  const days = ['', 'SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
+  const firstLeg = options[0]?.legs[0];
+  const board = document.createElement('section');
+  board.className = 'sb-avail-board';
+  board.innerHTML = `<div class="sb-avail-header">${date} ${days[Number(firstLeg?.day)] || '---'} &nbsp; ${firstLeg?.dep || ''} ${options[0]?.legs.at(-1)?.arr || ''}</div>`;
+
+  options.forEach((option, index) => {
+    const leg = option.legs[0];
+    const finalLeg = option.legs.at(-1);
+    const isConnection = option.legs.length > 1;
+    const line = index + 1;
+    const classes = leg.cls.split(' ');
+    const row = document.createElement('div');
+    row.className = 'sb-avail-row';
+    row.innerHTML = `
+      <span class="sb-avail-num">${line}</span><span class="sb-avail-air">${leg.al}</span><span class="sb-avail-flight">${leg.fn}</span>
+      <span class="sb-avail-classes"></span><span class="sb-avail-route">${leg.dep}&nbsp;&nbsp;${leg.arr}</span>
+      <span class="sb-avail-time">${leg.depT}&nbsp;&nbsp;${leg.arrT}${leg.dayOver ? ` +${leg.dayOver}` : ''}</span>
+      <span class="sb-avail-eq">${leg.eq}</span><button class="sb-avail-arrow" type="button" aria-label="Open seat hold">⌄</button>`;
+    const classBox = row.querySelector('.sb-avail-classes');
+    classes.forEach(bucket => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'sb-class-bucket';
+      button.textContent = bucket;
+      button.addEventListener('click', () => sbOpenSeatHold(line, bucket.charAt(0), detail));
+      classBox.appendChild(button);
+    });
+
+    const detail = document.createElement('div');
+    detail.className = 'sb-seat-hold';
+    detail.innerHTML = `
+      <div class="sb-flight-detail">From: ${leg.dep} ${date} at ${leg.depT} &nbsp; To: ${finalLeg.arr} ${date} at ${finalLeg.arrT} ${isConnection ? `&nbsp; Connection: ${leg.arr}` : ''} &nbsp; Equipment: ${leg.eq}${isConnection ? ` / ${finalLeg.eq}` : ''}</div>
+      <div class="sb-hold-controls"><label>Passengers <select class="sb-pax-count"><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option><option>9</option></select></label><label>Class ${leg.dep}-${leg.arr} <select class="sb-hold-class">${classes.map(c => `<option value="${c.charAt(0)}">${c.charAt(0)}</option>`).join('')}</select></label><button class="sb-hold-sell" type="button">Sell</button><button class="sb-hold-close" type="button" aria-label="Close">⌃</button></div>`;
+    detail.querySelector('.sb-hold-sell').addEventListener('click', () => {
+      const cls = detail.querySelector('.sb-hold-class').value;
+      const pax = detail.querySelector('.sb-pax-count').value;
+      if (cmdSell(`0${cls}${line}`, Number(pax))) {
+        detail.classList.remove('open');
+        board.classList.add('sb-hold-locked');
+      }
+    });
+    detail.querySelector('.sb-hold-close').addEventListener('click', () => detail.classList.remove('open'));
+    row.querySelector('.sb-avail-arrow').addEventListener('click', () => sbOpenSeatHold(line, classes.find(c => c.startsWith('Y'))?.charAt(0) || classes[0].charAt(0), detail));
+    board.appendChild(row);
+    if (isConnection) {
+      const onwardClasses = finalLeg.cls.split(' ');
+      const onward = document.createElement('div');
+      onward.className = 'sb-avail-row sb-onward-leg';
+      onward.innerHTML = `
+        <span class="sb-avail-num">↳</span><span class="sb-avail-air">${finalLeg.al}</span><span class="sb-avail-flight">${finalLeg.fn}</span>
+        <span class="sb-avail-classes"></span><span class="sb-avail-route">${finalLeg.dep}&nbsp;&nbsp;${finalLeg.arr}</span>
+        <span class="sb-avail-time">${finalLeg.depT}&nbsp;&nbsp;${finalLeg.arrT}${finalLeg.dayOver ? ` +${finalLeg.dayOver}` : ''}</span>
+        <span class="sb-avail-eq">${finalLeg.eq}</span><button class="sb-avail-arrow" type="button" aria-label="Open seat hold">⌄</button>`;
+      const onwardBox = onward.querySelector('.sb-avail-classes');
+      onwardClasses.forEach(bucket => {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'sb-class-bucket';
+        button.textContent = bucket;
+        button.addEventListener('click', () => sbOpenSeatHold(line, bucket.charAt(0), detail));
+        onwardBox.appendChild(button);
+      });
+      onward.querySelector('.sb-avail-arrow').addEventListener('click', () => sbOpenSeatHold(line, onwardClasses.find(c => c.startsWith('Y'))?.charAt(0) || onwardClasses[0].charAt(0), detail));
+      board.appendChild(onward);
+    }
+    board.appendChild(detail);
+  });
+  term.appendChild(board);
+  term.scrollTop = term.scrollHeight;
+}
+
+function sbOpenSeatHold(line, bookingClass, detail) {
+  document.querySelectorAll('.sb-seat-hold.open').forEach(panel => panel.classList.remove('open'));
+  detail.querySelector('.sb-hold-class').value = bookingClass;
+  detail.classList.add('open');
+  detail.scrollIntoView({ block: 'nearest' });
+}
 
 function sbSyncSidePanel() {
   const pnrLine = document.getElementById('panelPnrLine');

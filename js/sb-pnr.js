@@ -85,13 +85,14 @@ function sbEcho(cmd) {
   if (term.querySelector('.ph')) term.innerHTML = '';
   const echo = document.createElement('div');
   echo.className = 'line-echo';
-  echo.textContent = cmd.toUpperCase();
+  const text = cmd.toUpperCase().trim();
+  echo.textContent = text.endsWith('«') ? text : (text + '«');
   term.appendChild(echo);
 }
 function sbPrint(text, cls) {
   const term = document.getElementById('termArea');
   const line = document.createElement('div');
-  line.className = cls || 'line-ok';
+  line.className = cls || (text === '*' ? 'line-display' : 'line-ok');
   line.textContent = text;
   term.appendChild(line);
   term.appendChild(document.createElement('br'));

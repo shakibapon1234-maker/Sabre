@@ -117,7 +117,7 @@ function cmdName(raw) {
   const nm = body.match(/^([A-Z' -]+)\/([A-Z' ]+)\s+(MR|MRS|MS|MSTR|MISS|DR)?$/i);
   if (!nm) { sbWarn("FORMAT: -SURNAME/FIRSTNAME MR"); return; }
   sbState.names.push({ raw: body.toUpperCase(), surname: nm[1].trim(), first: nm[2].trim(), title: (nm[3] || '').toUpperCase() });
-  sbPrint(` ${sbState.names.length}.${body.toUpperCase()}`);
+  sbPrint('*');
 }
 
 /* ---------------------------------------------------------------------
@@ -127,7 +127,7 @@ function cmdPhone(raw) {
   const body = raw.replace(/^9/, '').trim();
   if (!body) { sbWarn("FORMAT: 9DAC 01XXXXXXXXX-A"); return; }
   sbState.phones.push({ raw: body.toUpperCase() });
-  sbPrint(` ${sbState.phones.length}.${body.toUpperCase()}`);
+  sbPrint('*');
 }
 
 /* ---------------------------------------------------------------------
@@ -137,7 +137,7 @@ function cmdReceivedFrom(raw) {
   const body = raw.replace(/^6/, '').trim();
   if (!body) { sbWarn("FORMAT: 6<AGENT/PASSENGER NAME>"); return; }
   sbState.receivedFrom = body.toUpperCase();
-  sbPrint(`RECEIVED FROM - ${sbState.receivedFrom}`);
+  sbPrint('*');
 }
 
 /* ---------------------------------------------------------------------
@@ -147,8 +147,8 @@ function cmdTicketingArrangement(raw) {
   const body = raw.replace(/^7/, '').trim();
   if (!body) { sbWarn("FORMAT: 7TAW-DDMMM/  e.g. 7TAW-20DEC/"); return; }
   sbState.ticketingArrangement = body.toUpperCase();
-  sbPrint(`TKT/TIME LIMIT`);
-  sbPrint(` 1.${sbState.ticketingArrangement}`);
+  sbPrint('*');
+
 }
 
 /* ---------------------------------------------------------------------
@@ -166,7 +166,7 @@ function cmdSSR(raw) {
     }
   }
   sbState.ssrEntries.push(body.toUpperCase());
-  sbPrint(` ${sbState.ssrEntries.length} SSR ${body.toUpperCase()}`);
+  sbPrint('*');
 }
 
 /* ---------------------------------------------------------------------
@@ -203,6 +203,47 @@ function cmdEndTransaction(redisplay) {
 /* ---------------------------------------------------------------------
    *R — redisplay current PNR
 --------------------------------------------------------------------- */
+/* ---------------------------------------------------------------------
+   DISPLAY COMMANDS (*-, *I, *P/*9, *7, *6, *3)
+--------------------------------------------------------------------- */
+function cmdDisplayName() {
+  if (!sbState.names.length) { sbWarn("NO NAMES IN PNR"); return; }
+  sbState.names.forEach((n, i) => sbPrint(` ${i + 1}.${n.raw}`));
+}
+
+function cmdDisplayItinerary() {
+  if (!sbState.booked.length) { sbWarn("NO ITINERARY IN PNR"); return; }
+  const weekDays = ['', 'SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
+  sbState.booked.forEach((s, i) => {
+    const dayOverTag = s.dayOver ? `+${s.dayOver}` : '';
+    const dayName = weekDays[Number(s.day)] || '---';
+    sbPrint(` ${i + 1} ${s.al.padEnd(5)} ${s.fn.padEnd(4)} ${s.cls.padEnd(2)} ${s.date} ${dayName}  ${s.dep.padEnd(4)} ${s.arr.padEnd(4)} ${s.status.padEnd(4)} ${s.depT}  ${s.arrT}${dayOverTag}`);
+  });
+}
+
+function cmdDisplayPhone() {
+  if (!sbState.phones.length) { sbWarn("NO PHONES IN PNR"); return; }
+  sbPrint("PHONES");
+  sbState.phones.forEach((p, i) => sbPrint(` ${i + 1}.${p.raw}`));
+}
+
+function cmdDisplayTicketing() {
+  if (!sbState.ticketingArrangement) { sbWarn("NO TICKETING ARRANGEMENT IN PNR"); return; }
+  sbPrint("TKT/TIME LIMIT");
+  sbPrint(` 1.${sbState.ticketingArrangement}`);
+}
+
+function cmdDisplayReceived() {
+  if (!sbState.receivedFrom) { sbWarn("NO RECEIVED FROM IN PNR"); return; }
+  sbPrint(`RECEIVED FROM - ${sbState.receivedFrom}`);
+}
+
+function cmdDisplaySSR() {
+  if (!sbState.ssrEntries.length) { sbWarn("NO SSR IN PNR"); return; }
+  sbPrint("SPECIAL SERVICE REQUEST");
+  sbState.ssrEntries.forEach((s, i) => sbPrint(` ${i + 1} ${s}`));
+}
+
 function cmdRedisplay() {
   sbPrint(sbRenderPNR());
 }
@@ -262,14 +303,20 @@ function sbParse(raw) {
   if (/^1\d{2}[A-Z]{3}[A-Z]{6}$/.test(upper)) return cmdAvailability(upper);
   if (/^0[A-Z]\d+$/.test(upper)) return cmdSell(upper);
   if (/^-[A-Z]/.test(upper)) return cmdName(upper);
-  if (/^9[A-Z]/.test(upper)) return cmdPhone(upper);
+  if (/^9[A-Z0-9]/.test(upper)) return cmdPhone(upper);
   if (/^6[A-Z]/.test(upper)) return cmdReceivedFrom(upper);
-  if (/^7[A-Z]/.test(upper)) return cmdTicketingArrangement(upper);
-  if (/^3[A-Z]/.test(upper)) return cmdSSR(upper);
+  if (/^7[A-Z0-9]/.test(upper)) return cmdTicketingArrangement(upper);
+  if (/^3[A-Z0-9]/.test(upper)) return cmdSSR(upper);
   if (/^WPNCB$|^WPNI$/.test(upper)) return cmdPriceQuote();
   if (/^ER?$/.test(upper)) return cmdEndTransaction(upper === "ER");
-  if (/^\*R$/.test(upper)) return cmdRedisplay();
-  if (/^\*[A-Z0-9]*$/.test(upper)) return cmdRetrieve(upper);
+  if (/^\*-$|^\*-ALL$|^\*N$/.test(upper)) return cmdDisplayName();
+  if (/^\*I$|^\*ITN$/.test(upper)) return cmdDisplayItinerary();
+  if (/^\*P$|^\*9$|^\*P9$/.test(upper)) return cmdDisplayPhone();
+  if (/^\*7$|^\*P7$/.test(upper)) return cmdDisplayTicketing();
+  if (/^\*6$|^\*P6$/.test(upper)) return cmdDisplayReceived();
+  if (/^\*3$|^\*P3D?$|^\*SSR$/.test(upper)) return cmdDisplaySSR();
+  if (/^\*A$|^\*R$|^\*$/.test(upper)) return cmdRedisplay();
+  if (/^\*[A-Z0-9]{5,6}$/.test(upper)) return cmdRetrieve(upper);
   if (/^WTP?$/.test(upper)) return cmdIssueTicket();
   if (/^XI$/.test(upper)) return cmdIgnore();
   if (/^HELP$|^\?$/.test(upper)) return cmdHelp();

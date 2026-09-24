@@ -8,18 +8,38 @@
    W/-XXX  — encode/decode a 3-letter city/airport code
 --------------------------------------------------------------------- */
 function cmdEncodeDecode(arg) {
-  const code = arg.toUpperCase();
-  const info = SB_AIRPORTS[code];
-  if (info) { sbPrint(`${code}  ${info.city}/${info.name}/${info.country}`); return; }
-  sbWarn(`UNABLE TO DECODE - ${code} NOT IN TRAINING DATABASE`);
+  const query = arg.trim().toUpperCase().replace(/^C(?:OUNTRY)?\s+/, '');
+  if (query === 'COUNTRIES' || query === 'COUNTRY LIST') {
+    sbPrint('TRAINING COUNTRY CODES (ISO)');
+    Object.entries(SB_COUNTRY_CODES).forEach(([code, country]) => sbPrint(`${code}  ${country}`));
+    return;
+  }
+  const info = SB_AIRPORTS[query];
+  if (info) { sbPrint(`${query}  ${info.city}/${info.name}/${info.country}`); return; }
+
+  const aliases = { ...Object.fromEntries(Object.entries(SB_COUNTRY_CODES).map(([code, country]) => [code, country])), UAE: 'UAE', UK: 'UK', USA: 'USA' };
+  const country = aliases[query] || query;
+  const isCountryQuery = Object.values(SB_COUNTRY_CODES).includes(country);
+  const matches = Object.entries(SB_AIRPORTS)
+    .filter(([, airport]) => isCountryQuery
+      ? airport.country === country
+      : airport.city.includes(query) || airport.name.includes(query))
+    .slice(0, 12);
+  if (matches.length) {
+    const heading = matches[0][1].country === country ? `AIRPORTS IN ${country}` : `CODE SEARCH - ${query}`;
+    sbPrint(heading);
+    matches.forEach(([code, airport]) => sbPrint(`${code}  ${airport.city} / ${airport.name} / ${airport.country}`));
+    return;
+  }
+  sbWarn(`NO AIRPORT OR COUNTRY MATCH - ${query} NOT IN TRAINING DATABASE`);
 }
 
 /* ---------------------------------------------------------------------
-   1N/1A  DDMMMCITYCITY — availability display (direct + connections)
+   1  DDMMMCITYCITY — availability display (direct + connections)
 --------------------------------------------------------------------- */
 function cmdAvailability(raw) {
-  const m = raw.match(/^1[NA](\d{2}[A-Z]{3})([A-Z]{3})([A-Z]{3})$/);
-  if (!m) { sbWarn("FORMAT: 1N<DDMMM><ORG><DST>  e.g. 1N25DECDACLHR"); return; }
+  const m = raw.match(/^1(\d{2}[A-Z]{3})([A-Z]{3})([A-Z]{3})$/);
+  if (!m) { sbWarn("FORMAT: 1<DDMMM><ORG><DST>  e.g. 120NOVDACBKK"); return; }
   const [, date, org, dst] = m;
 
   if (org === dst) { sbWarn("ORIGIN AND DESTINATION CANNOT BE THE SAME"); return; }
@@ -31,46 +51,62 @@ function cmdAvailability(raw) {
   const options = sbGenerateAvailability(org, dst, date);
   if (!options) { sbWarn(`NO SERVICE FOUND ${org}${dst} ${date}`); return; }
 
-  sbPrint(`** SABRE AVAILABILITY - ${org}${dst} ${date} 0000 **`);
-  sbPrint(` ${org} ${dst} ${date}  F 0000  DIRECT/CONNECT`);
+  sbState._availCache = options.map(opt => ({
+    date, dep: opt.legs[0].dep, arr: opt.legs[opt.legs.length - 1].arr, legs: opt.legs
+  }));
+  if (typeof sbRenderAvailabilityBoard === 'function') {
+    sbRenderAvailabilityBoard(options, date);
+    return;
+  }
+
+  const weekDays = ['', 'SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
+  const displayDay = weekDays[Number(options[0]?.legs[0]?.day)] || '---';
+  sbPrint(`${date} ${displayDay} ${org} ${dst}`);
   options.forEach((opt, i) => {
     opt.legs.forEach((leg, li) => {
       const lineNo = li === 0 ? String(i + 1) : ' ';
       const dayOverTag = leg.dayOver ? `+${leg.dayOver}` : '';
-      sbPrint(` ${lineNo} ${leg.al} ${leg.fn} ${leg.cls}  ${leg.dep} ${leg.arr} ${leg.depT} ${leg.arrT}${dayOverTag} ${date} E0 ${leg.eq} ${leg.day} 0`);
+      const classes = leg.cls.split(' ');
+      sbPrint(` ${lineNo.padStart(2)} ${leg.al.padEnd(5)} ${leg.fn.padEnd(4)} ${classes.slice(0, 9).join(' ').padEnd(27)} ${leg.dep.padEnd(4)} ${leg.arr.padEnd(4)} ${leg.depT}  ${leg.arrT}${dayOverTag.padStart(3)}  ${leg.eq}`);
+      if (classes.length > 9) sbPrint(`          ${classes.slice(9).join(' ')}`);
     });
     if (opt.legs.length > 1) sbPrint(`   CONNECTION VIA ${opt.legs[0].arr} — 2 SEGMENTS WILL BE SOLD TOGETHER`, 'line-warn');
   });
 
-  sbState._availCache = options.map(opt => ({
-    date, dep: opt.legs[0].dep, arr: opt.legs[opt.legs.length - 1].arr, legs: opt.legs
-  }));
 }
 
 /* ---------------------------------------------------------------------
    0<CLASS><LINE> — sell from displayed availability (all legs of that
    option are booked; a connection therefore adds 2 PNR lines)
 --------------------------------------------------------------------- */
-function cmdSell(raw) {
+function cmdSell(raw, quantity = 1) {
   const m = raw.match(/^0([A-Z])(\d+)$/);
-  if (!m) { sbWarn("FORMAT: 0<CLASS><LINE>  e.g. 0Y1"); return; }
+  if (!m) { sbWarn("FORMAT: 0<CLASS><LINE>  e.g. 0Y1"); return false; }
   const [, cls, lineStr] = m;
   const line = parseInt(lineStr, 10);
   const cache = sbState._availCache;
-  if (!cache) { sbWarn("NO AVAILABILITY DISPLAYED - USE 1N ENTRY FIRST"); return; }
+  if (!cache) { sbWarn("NO AVAILABILITY DISPLAYED - USE 1 ENTRY FIRST"); return false; }
+  if (sbState.booked.length > 0 && !sbState.ended) {
+    sbWarn("UNSAVED SEAT HOLD EXISTS - ENTER E/ER TO CREATE PNR OR XI TO IGNORE BEFORE A NEW HOLD");
+    return false;
+  }
   const opt = cache[line - 1];
-  if (!opt) { sbWarn(`LINE ${line} NOT FOUND IN LAST AVAILABILITY DISPLAY`); return; }
+  if (!opt) { sbWarn(`LINE ${line} NOT FOUND IN LAST AVAILABILITY DISPLAY`); return false; }
 
+  sbPrint("BOOKING STATUS: SEGMENTS ADDED TO PNR", "sb-booking-status");
+  const weekDays = ['', 'SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
   opt.legs.forEach(leg => {
     sbState.booked.push({
       al: leg.al, fn: leg.fn, cls, date: opt.date, dep: leg.dep, arr: leg.arr,
-      status: "HK1", depT: leg.depT || "----", arrT: leg.arrT || "----",
+      status: `SS${quantity}`, depT: leg.depT || "----", arrT: leg.arrT || "----",
       eq: leg.eq, day: leg.day, dayOver: leg.dayOver
     });
     const s = sbState.booked[sbState.booked.length - 1];
     const dayOverTag = s.dayOver ? `+${s.dayOver}` : '';
-    sbPrint(` ${sbState.booked.length} ${s.al} ${s.fn}${s.cls} ${s.date} ${s.day} ${s.dep}${s.arr} HK1 ${s.depT} ${s.arrT}${dayOverTag} E0 ${s.eq}`);
+    const dayName = weekDays[Number(s.day)] || '---';
+    sbPrint(` ${sbState.booked.length} ${s.al.padEnd(5)} ${s.fn.padEnd(4)} ${s.cls.padEnd(2)} ${s.date} ${dayName}  ${s.dep.padEnd(4)} ${s.arr.padEnd(4)} ${s.status.padEnd(4)} ${s.depT}  ${s.arrT}${dayOverTag}`);
   });
+  return true;
 }
 
 /* ---------------------------------------------------------------------
@@ -81,7 +117,7 @@ function cmdName(raw) {
   const nm = body.match(/^([A-Z' -]+)\/([A-Z' ]+)\s+(MR|MRS|MS|MSTR|MISS|DR)?$/i);
   if (!nm) { sbWarn("FORMAT: -SURNAME/FIRSTNAME MR"); return; }
   sbState.names.push({ raw: body.toUpperCase(), surname: nm[1].trim(), first: nm[2].trim(), title: (nm[3] || '').toUpperCase() });
-  sbPrint(` ${sbState.names.length}.${body.toUpperCase()}`);
+  sbPrint('*');
 }
 
 /* ---------------------------------------------------------------------
@@ -91,7 +127,7 @@ function cmdPhone(raw) {
   const body = raw.replace(/^9/, '').trim();
   if (!body) { sbWarn("FORMAT: 9DAC 01XXXXXXXXX-A"); return; }
   sbState.phones.push({ raw: body.toUpperCase() });
-  sbPrint(` ${sbState.phones.length}.${body.toUpperCase()}`);
+  sbPrint('*');
 }
 
 /* ---------------------------------------------------------------------
@@ -101,7 +137,7 @@ function cmdReceivedFrom(raw) {
   const body = raw.replace(/^6/, '').trim();
   if (!body) { sbWarn("FORMAT: 6<AGENT/PASSENGER NAME>"); return; }
   sbState.receivedFrom = body.toUpperCase();
-  sbPrint(`RECEIVED FROM - ${sbState.receivedFrom}`);
+  sbPrint('*');
 }
 
 /* ---------------------------------------------------------------------
@@ -111,8 +147,8 @@ function cmdTicketingArrangement(raw) {
   const body = raw.replace(/^7/, '').trim();
   if (!body) { sbWarn("FORMAT: 7TAW-DDMMM/  e.g. 7TAW-20DEC/"); return; }
   sbState.ticketingArrangement = body.toUpperCase();
-  sbPrint(`TKT/TIME LIMIT`);
-  sbPrint(` 1.${sbState.ticketingArrangement}`);
+  sbPrint('*');
+
 }
 
 /* ---------------------------------------------------------------------
@@ -130,7 +166,7 @@ function cmdSSR(raw) {
     }
   }
   sbState.ssrEntries.push(body.toUpperCase());
-  sbPrint(` ${sbState.ssrEntries.length} SSR ${body.toUpperCase()}`);
+  sbPrint('*');
 }
 
 /* ---------------------------------------------------------------------
@@ -167,6 +203,47 @@ function cmdEndTransaction(redisplay) {
 /* ---------------------------------------------------------------------
    *R — redisplay current PNR
 --------------------------------------------------------------------- */
+/* ---------------------------------------------------------------------
+   DISPLAY COMMANDS (*-, *I, *P/*9, *7, *6, *3)
+--------------------------------------------------------------------- */
+function cmdDisplayName() {
+  if (!sbState.names.length) { sbWarn("NO NAMES IN PNR"); return; }
+  sbState.names.forEach((n, i) => sbPrint(` ${i + 1}.${n.raw}`));
+}
+
+function cmdDisplayItinerary() {
+  if (!sbState.booked.length) { sbWarn("NO ITINERARY IN PNR"); return; }
+  const weekDays = ['', 'SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
+  sbState.booked.forEach((s, i) => {
+    const dayOverTag = s.dayOver ? `+${s.dayOver}` : '';
+    const dayName = weekDays[Number(s.day)] || '---';
+    sbPrint(` ${i + 1} ${s.al.padEnd(5)} ${s.fn.padEnd(4)} ${s.cls.padEnd(2)} ${s.date} ${dayName}  ${s.dep.padEnd(4)} ${s.arr.padEnd(4)} ${s.status.padEnd(4)} ${s.depT}  ${s.arrT}${dayOverTag}`);
+  });
+}
+
+function cmdDisplayPhone() {
+  if (!sbState.phones.length) { sbWarn("NO PHONES IN PNR"); return; }
+  sbPrint("PHONES");
+  sbState.phones.forEach((p, i) => sbPrint(` ${i + 1}.${p.raw}`));
+}
+
+function cmdDisplayTicketing() {
+  if (!sbState.ticketingArrangement) { sbWarn("NO TICKETING ARRANGEMENT IN PNR"); return; }
+  sbPrint("TKT/TIME LIMIT");
+  sbPrint(` 1.${sbState.ticketingArrangement}`);
+}
+
+function cmdDisplayReceived() {
+  if (!sbState.receivedFrom) { sbWarn("NO RECEIVED FROM IN PNR"); return; }
+  sbPrint(`RECEIVED FROM - ${sbState.receivedFrom}`);
+}
+
+function cmdDisplaySSR() {
+  if (!sbState.ssrEntries.length) { sbWarn("NO SSR IN PNR"); return; }
+  sbPrint("SPECIAL SERVICE REQUEST");
+  sbState.ssrEntries.forEach((s, i) => sbPrint(` ${i + 1} ${s}`));
+}
+
 function cmdRedisplay() {
   sbPrint(sbRenderPNR());
 }
@@ -222,18 +299,24 @@ function sbParse(raw) {
   if (!cmd) return;
   const upper = cmd.toUpperCase();
 
-  if (/^W\/-[A-Z]{3}$/.test(upper)) return cmdEncodeDecode(upper.slice(3));
-  if (/^1[NA]\d{2}[A-Z]{3}[A-Z]{6}$/.test(upper)) return cmdAvailability(upper);
+  if (/^W\/-[A-Z][A-Z .'-]*$/.test(upper)) return cmdEncodeDecode(upper.slice(3));
+  if (/^1\d{2}[A-Z]{3}[A-Z]{6}$/.test(upper)) return cmdAvailability(upper);
   if (/^0[A-Z]\d+$/.test(upper)) return cmdSell(upper);
   if (/^-[A-Z]/.test(upper)) return cmdName(upper);
-  if (/^9[A-Z]/.test(upper)) return cmdPhone(upper);
+  if (/^9[A-Z0-9]/.test(upper)) return cmdPhone(upper);
   if (/^6[A-Z]/.test(upper)) return cmdReceivedFrom(upper);
-  if (/^7[A-Z]/.test(upper)) return cmdTicketingArrangement(upper);
-  if (/^3[A-Z]/.test(upper)) return cmdSSR(upper);
+  if (/^7[A-Z0-9]/.test(upper)) return cmdTicketingArrangement(upper);
+  if (/^3[A-Z0-9]/.test(upper)) return cmdSSR(upper);
   if (/^WPNCB$|^WPNI$/.test(upper)) return cmdPriceQuote();
   if (/^ER?$/.test(upper)) return cmdEndTransaction(upper === "ER");
-  if (/^\*R$/.test(upper)) return cmdRedisplay();
-  if (/^\*[A-Z0-9]*$/.test(upper)) return cmdRetrieve(upper);
+  if (/^\*-$|^\*-ALL$|^\*N$/.test(upper)) return cmdDisplayName();
+  if (/^\*I$|^\*ITN$/.test(upper)) return cmdDisplayItinerary();
+  if (/^\*P$|^\*9$|^\*P9$/.test(upper)) return cmdDisplayPhone();
+  if (/^\*7$|^\*P7$/.test(upper)) return cmdDisplayTicketing();
+  if (/^\*6$|^\*P6$/.test(upper)) return cmdDisplayReceived();
+  if (/^\*3$|^\*P3D?$|^\*SSR$/.test(upper)) return cmdDisplaySSR();
+  if (/^\*A$|^\*R$|^\*$/.test(upper)) return cmdRedisplay();
+  if (/^\*[A-Z0-9]{5,6}$/.test(upper)) return cmdRetrieve(upper);
   if (/^WTP?$/.test(upper)) return cmdIssueTicket();
   if (/^XI$/.test(upper)) return cmdIgnore();
   if (/^HELP$|^\?$/.test(upper)) return cmdHelp();
@@ -248,6 +331,7 @@ function sendCmd() {
   const input = document.getElementById('cmdInput');
   const val = input.value.trim();
   if (!val) return;
+  if (typeof sbRememberCommand === 'function') sbRememberCommand(val.toUpperCase());
   sbEcho(val);
   sbParse(val);
   input.value = '';
