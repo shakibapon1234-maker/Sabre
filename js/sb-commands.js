@@ -478,6 +478,9 @@ function sbParse(raw) {
   if (!cmd) return;
   const upper = cmd.toUpperCase();
 
+  if (/^JR(?:\s*.*)?$/i.test(upper)) {
+    if (typeof cmdFareShopJR === 'function') return cmdFareShopJR();
+  }
   if (/^W\/-[A-Z][A-Z .'-]*$/.test(upper)) return cmdEncodeDecode(upper.slice(3));
   if (/^WPA(?:\s*([A-Z0-9]{2})|\s+(.+))?$/.test(upper) || /^WP$/i.test(upper)) return cmdWpa(upper);
   if (/^\*PQ(?:\s*\d+)?$|^\*PQS$|^3PQ$|^PQ$/i.test(upper)) return cmdDisplayPq();
