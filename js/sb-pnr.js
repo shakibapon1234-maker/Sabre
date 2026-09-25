@@ -269,6 +269,9 @@ function sbRenderPNR() {
   if (sbState.ticketingArrangement) {
     lines.push("TKT/TIME LIMIT");
     lines.push(` 1.${sbState.ticketingArrangement}`);
+  } else if (sbState.locator) {
+    lines.push("TKT/TIME LIMIT");
+    lines.push(" 1.T-");
   }
 
   // Phones
@@ -281,21 +284,20 @@ function sbRenderPNR() {
   if (sbState.locator) {
     lines.push("PASSENGER DETAIL FIELD EXISTS - USE PD TO DISPLAY");
     lines.push("GENERAL FACTS");
+    const mainAl = sbState.booked[0]?.al || '1B';
+    const d = new Date();
+    const mon = ["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"][d.getMonth()];
+    const dt = `${String(d.getDate()).padStart(2,'0')}${mon}`;
+    // Sabre keeps its advisory facts alongside any SSR the agent has added.
+    lines.push(" 1.SSR OTHS 1B 270799072759 - SHORT TTL DUE TO MISSING CTCE/CTCM");
+    lines.push(` 2.SSR ADTK 1B TO ${mainAl} BY ${dt} 0601 ZZZ TIME ZONE OTHERWISE WILL BE XLD`);
     if (sbState.ssrEntries.length || sbState.documents.length) {
-      sbState.ssrEntries.forEach((s, i) => lines.push(` ${i + 1}.${s}`));
+      sbState.ssrEntries.forEach((s, i) => lines.push(` ${i + 4}.${s}`));
       sbState.documents.forEach((doc, i) => {
         const pax = sbState.names[0]?.raw || 'PASSENGER';
         const docText = doc.raw.replace(/^DOCS\//, '').replace(/-\d+\.\d+$/, '');
-        lines.push(` ${sbState.ssrEntries.length + i + 1}.SSR DOCS ${doc.carrier} HK1/${docText}  1.1 ${pax}`);
+        lines.push(` ${sbState.ssrEntries.length + i + 4}.SSR DOCS ${doc.carrier} HK1/${docText}  1.1 ${pax}`);
       });
-    } else {
-      const mainAl = sbState.booked[0]?.al || '1B';
-      const d = new Date();
-      const mon = ["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"][d.getMonth()];
-      const dt = `${String(d.getDate()).padStart(2,'0')}${mon}`;
-      lines.push(" 1.SSR OTHS 1B 270799072759 - SHORT TTL DUE TO MISSING CTCE/CTCM");
-      lines.push(` 2.SSR ADTK 1B TO ${mainAl} BY ${dt} 0601 ZZZ TIME ZONE OTHERWISE WILL BE XLD`);
-      lines.push(` 3.SSR OTHS 1B MISSING SSR CTCM MOBILE OR SSR CTCE EMAIL OR SSR CTCR NON-CONSENT FOR ${mainAl}`);
     }
   }
 

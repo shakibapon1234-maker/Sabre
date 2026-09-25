@@ -171,7 +171,10 @@ function cmdSSR(raw) {
       return;
     }
   }
-  sbState.ssrEntries.push(body.toUpperCase());
+  const carrier = sbState.privateFare?.carrier || sbState.booked[0]?.al || '1B';
+  const [code, ...detail] = body.toUpperCase().split('/');
+  // Store the same SSR shape that is shown again after ER / IR.
+  sbState.ssrEntries.push(`SSR ${code} ${carrier} HK1${detail.length ? '/' + detail.join('/') : ''}`);
   sbPrint('*');
 }
 
