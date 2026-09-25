@@ -17,8 +17,7 @@ function createWindow() {
     ...iconOptions,
     webPreferences: {
       nodeIntegration: false,
-      contextIsolation: true,
-      webSecurity: false
+      contextIsolation: true
     },
     backgroundColor: "#141a24",
     show: false
@@ -32,7 +31,9 @@ function createWindow() {
   });
 
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
-    shell.openExternal(url);
+    // Never hand untrusted schemes (for example file:, javascript:, or a
+    // custom protocol) to the operating system.
+    if (/^https?:\/\//i.test(url)) shell.openExternal(url);
     return { action: "deny" };
   });
 
