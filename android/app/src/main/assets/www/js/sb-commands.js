@@ -511,10 +511,22 @@ function cmdIssueTicket() {
   if (!sbState.printerDesignated) { sbWarn('PRINTER NOT DESIGNATED - ENTER W*BD, DSIV<PRINTER ID>, THEN PTR/<PRINTER ID>'); return; }
   if (sbState.ticketed) { sbWarn("ALREADY TICKETED - " + sbState.eticketNumber); return; }
   sbState.ticketed = true;
-  sbState.eticketNumber = "657-" + Math.floor(1000000000 + Math.random() * 8999999999).toString().slice(0, 10);
-  sbPrint(`OK ETICKET  ${sbState.eticketNumber}`);
-  sbState.names.forEach(n => sbPrint(n.raw));
+  sbState.invoiced = true;
+  sbState.eticketNumber = "618-" + Math.floor(1000000000 + Math.random() * 8999999999).toString().slice(0, 10);
+  sbPrint(`OK     ${sbState.fareQuote.total}`);
+  sbPrint('ETR MESSAGE PROCESSED');
+  if (sbState.locator) sbPrint(sbState.locator);
+  sbPrint(sbRenderPNR());
   sbSyncSidePanel();
+}
+
+function cmdDisplayTicket() {
+  if (!sbState.ticketed || !sbState.eticketNumber) { sbWarn('NO TICKET RECORD EXISTS'); return; }
+  const pax = sbState.names[0]?.surname || sbState.names[0]?.raw || 'PASSENGER';
+  const ticketNo = sbState.eticketNumber.replace('-', '');
+  sbPrint('TKT/TIME LIMIT');
+  sbPrint(` 1.${sbState.ticketingArrangement || 'T-AWAITING TICKET TIME LIMIT'}`);
+  sbPrint(` 2.TE ${ticketNo}-BD ${pax} ${sbState.officeId}*ATW ${sbSabreFooterStamp()}*I`);
 }
 
 /* ---------------------------------------------------------------------
@@ -550,6 +562,7 @@ function sbParse(raw) {
   if (/^W\*BD$/.test(upper)) return cmdPrinterWorkArea();
   if (/^DSIV[A-Z0-9]+$/.test(upper)) return cmdPrinterAssign(upper);
   if (/^PTR\/[A-Z0-9]+$/.test(upper)) return cmdPrinterDesignate(upper);
+  if (/^W[¥☨‡§]PQ\d+[¥☨‡§]ASQ[¥☨‡§]FINVAGT[¥☨‡§]K7$/.test(upper)) return cmdIssueTicket();
   if (/^WPA(?:\s*([A-Z0-9]{2})|\s+(.+))?$/.test(upper) || /^WP$/i.test(upper)) return cmdWpa(upper);
   if (/^\*PQ(?:\s*\d+)?$|^\*PQS$|^3PQ$|^PQ$/i.test(upper)) return cmdDisplayPq();
     if (/^1\d{2}[A-Z]{3}[A-Z]{6}$/.test(upper)) return cmdAvailability(upper);
@@ -567,6 +580,7 @@ function sbParse(raw) {
   if (/^\*7$|^\*P7$/.test(upper)) return cmdDisplayTicketing();
   if (/^\*6$|^\*P6$/.test(upper)) return cmdDisplayReceived();
   if (/^\*P3D$/.test(upper)) return cmdDisplayDocs();
+  if (/^\*T$/.test(upper)) return cmdDisplayTicket();
   if (/^\*3$|^\*P3?$|^\*SSR$/.test(upper)) return cmdDisplaySSR();
   if (/^\*A$|^\*R$|^\*$/.test(upper)) return cmdRedisplay();
   if (/^\*[A-Z0-9]{5,6}$/.test(upper)) return cmdRetrieve(upper);
@@ -583,7 +597,7 @@ function sbParse(raw) {
 --------------------------------------------------------------------- */
 function sendCmd() {
   const input = document.getElementById('cmdInput');
-  const val = input.value.trim();
+  const val = input.value.trim().replace(/«$/, '');
   if (!val) return;
   if (typeof sbRememberCommand === 'function') sbRememberCommand(val.toUpperCase());
   if (val.toUpperCase() === 'IR') {
@@ -593,6 +607,7 @@ function sendCmd() {
   sbEcho(val);
   // On the Sabre keyboard the key beside Enter is Cross of Lorraine (¥).
   // It joins entries, e.g. 6S¥ER¥IR, rather than being literal text.
-  val.split(/[¥☨‡]/).map(entry => entry.trim()).filter(Boolean).forEach(sbParse);
+  if (/^W[¥☨‡§]PQ\d+[¥☨‡§]ASQ[¥☨‡§]FINVAGT[¥☨‡§]K7$/i.test(val)) sbParse(val);
+  else val.split(/[¥☨‡§]/).map(entry => entry.trim()).filter(Boolean).forEach(sbParse);
   input.value = '';
 }

@@ -30,6 +30,7 @@ function sbEmptyState() {
     privateFare: null,      // fare loaded through WPA <carrier> then PQ
     ticketed: false,
     eticketNumber: null,
+    invoiced: false,
     ended: false
   };
 }
@@ -303,6 +304,18 @@ function sbRenderPNR() {
     const fq = sbState.fareQuote;
     lines.push(`FARE  ${fq.currency}${fq.base}  TAX ${fq.currency}${fq.tax}  TOTAL ${fq.currency}${fq.total}` +
       (fq.pax > 1 ? `  (${fq.pax} PAX)` : ''));
+  }
+
+  if (sbState.invoiced) {
+    const fare = sbState.fareQuote;
+    const ticketNo = (sbState.eticketNumber || '').replace('-', '');
+    const carrier = sbState.privateFare?.carrier || sbState.booked[0]?.al || 'MH';
+    const pax = sbState.names[0]?.raw || 'PASSENGER';
+    lines.push('INVOICED');
+    lines.push('PRICE QUOTE RECORD - AUTOPRICED');
+    lines.push('SECURITY INFO EXISTS *P3D OR *P4D TO DISPLAY');
+    lines.push('ACCOUNTING DATA');
+    lines.push(` 1.  ${carrier}¥${ticketNo}/      7/      ${fare?.base || 0}/  ${fare?.tax || 0}/ONE/CA 1.1${pax}/1/F/E`);
   }
 
   // Received From
