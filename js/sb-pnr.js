@@ -30,6 +30,7 @@ function sbEmptyState() {
     privateFare: null,      // fare loaded through WPA <carrier> then PQ
     ticketed: false,
     eticketNumber: null,
+    ticketNumbers: [],
     invoiced: false,
     ended: false
   };
@@ -250,7 +251,7 @@ function sbRenderPNR() {
 
   // Names with 1.1 indexing
   if (sbState.names.length) {
-    lines.push(sbState.names.map((n, i) => ` 1.${i + 1}${n.raw}`).join('  '));
+    lines.push(sbState.names.map((n, i) => ` 1.${i + 1}${n.raw}${n.paxType && n.paxType !== 'ADT' ? ` (${n.paxType}${n.dob ? '/' + n.dob : ''})` : ''}`).join('  '));
   } else {
     lines.push(' 1.1NAME PENDING');
   }
@@ -292,11 +293,12 @@ function sbRenderPNR() {
     lines.push(" 1.SSR OTHS 1B 270799072759 - SHORT TTL DUE TO MISSING CTCE/CTCM");
     lines.push(` 2.SSR ADTK 1B TO ${mainAl} BY ${dt} 0601 ZZZ TIME ZONE OTHERWISE WILL BE XLD`);
     if (sbState.ssrEntries.length || sbState.documents.length) {
-      sbState.ssrEntries.forEach((s, i) => lines.push(` ${i + 4}.${s}`));
+      sbState.ssrEntries.forEach((s, i) => lines.push(` ${i + 4}.${typeof s === 'string' ? s : s.text}`));
       sbState.documents.forEach((doc, i) => {
-        const pax = sbState.names[0]?.raw || 'PASSENGER';
+        const paxRef = doc.paxRef || 1;
+        const pax = sbState.names[paxRef - 1]?.raw || 'PASSENGER';
         const docText = doc.raw.replace(/^DOCS\//, '').replace(/-\d+\.\d+$/, '');
-        lines.push(` ${sbState.ssrEntries.length + i + 4}.SSR DOCS ${doc.carrier} HK1/${docText}  1.1 ${pax}`);
+        lines.push(` ${sbState.ssrEntries.length + i + 4}.SSR DOCS ${doc.carrier} HK1/${docText}  1.${paxRef} ${pax}`);
       });
     }
   }

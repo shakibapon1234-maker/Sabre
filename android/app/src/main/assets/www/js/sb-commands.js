@@ -114,10 +114,30 @@ function cmdSell(raw, quantity = 1) {
 --------------------------------------------------------------------- */
 function cmdName(raw) {
   const body = raw.replace(/^-/, '').trim();
-  const nm = body.match(/^([A-Z' -]+)\/([A-Z' ]+)\s+(MR|MRS|MS|MSTR|MISS|DR)?$/i);
-  if (!nm) { sbWarn("FORMAT: -SURNAME/FIRSTNAME MR"); return; }
-  sbState.names.push({ raw: body.toUpperCase(), surname: nm[1].trim(), first: nm[2].trim(), title: (nm[3] || '').toUpperCase() });
+  const upper = body.toUpperCase();
+  const infant = upper.match(/(?:\*I|\bINF)\/?(\d{2}[A-Z]{3}\d{2,4})?$/);
+  const child = upper.match(/(?:\*C|\bCHD|\bCNN|\bC\d{1,2})(?:\/(\d{2}[A-Z]{3}\d{2,4}))?$/);
+  const clean = upper.replace(/(?:\*I|\bINF|\*C|\bCHD|\bCNN|\bC\d{1,2})(?:\/?\d{2}[A-Z]{3}\d{2,4})?$/g, '').trim().replace(/[\s/]+$/, '');
+  const nm = clean.match(/^([A-Z' -]+)\/([A-Z' ]+?)(?:\s+(MR|MRS|MS|MSTR|MISS|DR))?$/);
+  if (!nm) { sbWarn("FORMAT: -SURNAME/FIRSTNAME MR  |  -SURNAME/CHILD CHD/15JAN15  |  -SURNAME/INFANT*I/20JAN25"); return; }
+  const paxType = infant ? 'INF' : (child ? 'CHD' : 'ADT');
+  const dob = (infant?.[1] || child?.[1] || '');
+  const title = (nm[3] || (paxType === 'CHD' ? 'CNN' : paxType === 'INF' ? 'INF' : '')).toUpperCase();
+  sbState.names.push({ raw: body.toUpperCase(), surname: nm[1].trim(), first: nm[2].trim(), title, paxType, dob });
   sbPrint('*');
+}
+
+function sbPaxMultiplier(pax) { return pax?.paxType === 'INF' ? 0.10 : pax?.paxType === 'CHD' ? 0.75 : 1; }
+function sbPaxLabel(pax) { return pax?.paxType || 'ADT'; }
+function sbBuildFareQuote(fare) {
+  const passengers = sbState.names.length ? sbState.names : [{ paxType: 'ADT' }];
+  const breakdown = passengers.map((pax, index) => {
+    const multiplier = sbPaxMultiplier(pax);
+    const base = Math.round(fare.baseBdt * multiplier);
+    const tax = Math.round(fare.tax * multiplier);
+    return { index: index + 1, type: sbPaxLabel(pax), base, tax, total: base + tax };
+  });
+  return { base: breakdown.reduce((sum, item) => sum + item.base, 0), tax: breakdown.reduce((sum, item) => sum + item.tax, 0), total: breakdown.reduce((sum, item) => sum + item.total, 0), currency: 'BDT', pax: passengers.length, breakdown };
 }
 
 /* ---------------------------------------------------------------------
@@ -159,11 +179,14 @@ function cmdSSR(raw) {
   if (!body) { sbWarn("FORMAT: 3<SSRCODE>/P1  e.g. 3VGML/1"); return; }
   if (/^DOCS(?:\/|$)/i.test(body)) {
     const carrier = sbState.privateFare?.carrier || sbState.booked[0]?.al || 'MH';
-    sbState.documents.push({ raw: body.toUpperCase(), carrier });
+    const paxRef = Number(body.match(/-(?:1\.)?(\d+)$/)?.[1] || body.match(/\/P(\d+)$/i)?.[1] || 1);
+    if (paxRef > sbState.names.length) { sbWarn(`INVALID PASSENGER REFERENCE - ONLY ${sbState.names.length} NAME(S) IN PNR`); return; }
+    sbState.documents.push({ raw: body.toUpperCase(), carrier, paxRef });
     sbPrint('*');
     return;
   }
   const paxRefMatch = body.match(/\/P?(\d+)$/i);
+  const paxRef = Number(paxRefMatch?.[1] || 1);
   if (paxRefMatch) {
     const paxNum = parseInt(paxRefMatch[1], 10);
     if (sbState.names.length && paxNum > sbState.names.length) {
@@ -174,7 +197,7 @@ function cmdSSR(raw) {
   const carrier = sbState.privateFare?.carrier || sbState.booked[0]?.al || '1B';
   const [code, ...detail] = body.toUpperCase().split('/');
   // Store the same SSR shape that is shown again after ER / IR.
-  sbState.ssrEntries.push(`SSR ${code} ${carrier} HK1${detail.length ? '/' + detail.join('/') : ''}`);
+  sbState.ssrEntries.push({ text: `SSR ${code} ${carrier} HK1${detail.length ? '/' + detail.join('/') : ''}`, paxRef });
   sbPrint('*');
 }
 
@@ -307,20 +330,14 @@ function cmdWpa(raw) {
   sbState.pqPriced = true;
   sbState.pqPending = false;
   sbState.pqStoredInPNR = false;
-  sbState.fareQuote = {
-    base: fare.baseBdt,
-    tax: fare.tax,
-    total: fare.total,
-    currency: "BDT",
-    pax: Math.max(sbState.names.length, 1)
-  };
+  sbState.fareQuote = sbBuildFareQuote(fare);
 
   // Fare load reply: keep the command echo above this reply and render the
   // host response as one compact block, like Sabre Agency Workspace.
   const printFare = text => sbPrint(text, 'fare-output');
   printFare('');
   printFare('          BASE FARE      EQUIV AMOUNT    TAXES/FEES/CHARGES');
-  printFare(`1-        USD${fare.baseUsd.toFixed(2)}          BDT${fare.baseBdt}             BDT${fare.tax}XT      BDT${fare.total}ADT           TOTAL:   BDT${fare.total}`);
+  printFare(`1-        USD${fare.baseUsd.toFixed(2)}          BDT${sbState.fareQuote.base}             BDT${sbState.fareQuote.tax}XT      BDT${sbState.fareQuote.total}ADT           TOTAL:   BDT${sbState.fareQuote.total}`);
   printFare('     XT       500BD            4000UT                25000W             447E5');
   printFare('             4328YQ            1237P8                1237P7');
   printFare(`             ${fare.baseUsd.toFixed(2)}             ${fare.baseBdt}                 ${fare.tax}`);
@@ -358,13 +375,7 @@ function cmdDisplayPq() {
   if (!sbState.privateFare) {
     const carrier = (sbState.booked[0] && sbState.booked[0].al) || 'MH';
     sbState.privateFare = sbGetFareForCarrier(carrier);
-    sbState.fareQuote = {
-      base: sbState.privateFare.baseBdt,
-      tax: sbState.privateFare.tax,
-      total: sbState.privateFare.total,
-      currency: "BDT",
-      pax: Math.max(sbState.names.length, 1)
-    };
+    sbState.fareQuote = sbBuildFareQuote(sbState.privateFare);
   }
 
   const fare = sbState.privateFare;
@@ -379,12 +390,13 @@ function cmdDisplayPq() {
   printFare('PQ 1                                    INPUT PTC - ADT');
   printFare('');
   printFare(` 1.1${paxName}`);
+  sbState.names.slice(1).forEach((pax, index) => printFare(` 1.${index + 2}${pax.surname}/${pax.first} ${pax.title}  - ${sbPaxLabel(pax)}${pax.dob ? `/${pax.dob}` : ''}`));
   printFare(`VALIDATING CARRIER - ${fare.carrier}`);
   printFare(` 1 O${fare.origin} ${fare.carrier} ${fare.flightNo}${fare.cls} ${fare.date} ${fare.depTime}  ${fare.fareBasis}       OK ${fare.date}${fare.date}25K`);
   printFare(`   ${fare.dest}`);
   printFare('');
   printFare('      BASE FARE       EQUIV AMT    TAXES/FEES/CHARGES       TOTAL');
-  printFare(`      USD${fare.baseUsd.toFixed(2)}        BDT${fare.baseBdt}              ${fare.tax}XT     BDT${fare.total}`);
+  printFare(`      USD${fare.baseUsd.toFixed(2)}        BDT${sbState.fareQuote.base}              ${sbState.fareQuote.tax}XT     BDT${sbState.fareQuote.total}`);
   printFare(' XT       500BD          4000UT              25000W         447E5');
   printFare('         4328YQ          1237P8              1237P7');
   printFare(fare.route);
@@ -433,7 +445,7 @@ function cmdDisplayReceived() {
 function cmdDisplaySSR() {
   if (!sbState.ssrEntries.length) { sbWarn("NO SSR IN PNR"); return; }
   sbPrint("SPECIAL SERVICE REQUEST");
-  sbState.ssrEntries.forEach((s, i) => sbPrint(` ${i + 1} ${s}`));
+  sbState.ssrEntries.forEach((s, i) => sbPrint(` ${i + 1} ${typeof s === 'string' ? s : s.text}`));
 }
 
 function cmdDisplayDocs() {
@@ -516,6 +528,10 @@ function cmdIssueTicket() {
   sbState.ticketed = true;
   sbState.invoiced = true;
   sbState.eticketNumber = "618-" + Math.floor(1000000000 + Math.random() * 8999999999).toString().slice(0, 10);
+  const passengerCount = Math.max(sbState.names.length, 1);
+  sbState.ticketNumbers = Array.from({ length: passengerCount }, (_, index) => index === 0
+    ? sbState.eticketNumber.replace('-', '')
+    : '618' + Math.floor(1000000000 + Math.random() * 8999999999).toString().slice(0, 10));
   sbPrint(`OK     ${sbState.fareQuote.total}`);
   sbPrint('ETR MESSAGE PROCESSED');
   if (sbState.locator) sbPrint(sbState.locator);
@@ -525,11 +541,14 @@ function cmdIssueTicket() {
 
 function cmdDisplayTicket() {
   if (!sbState.ticketed || !sbState.eticketNumber) { sbWarn('NO TICKET RECORD EXISTS'); return; }
-  const pax = sbState.names[0]?.surname || sbState.names[0]?.raw || 'PASSENGER';
-  const ticketNo = sbState.eticketNumber.replace('-', '');
   sbPrint('TKT/TIME LIMIT');
   sbPrint(` 1.${sbState.ticketingArrangement || 'T-AWAITING TICKET TIME LIMIT'}`);
-  sbPrint(` 2.TE ${ticketNo}-BD ${pax} ${sbState.officeId}*ATW ${sbSabreFooterStamp()}*I`);
+  const tickets = sbState.ticketNumbers?.length ? sbState.ticketNumbers : [sbState.eticketNumber.replace('-', '')];
+  tickets.forEach((ticketNo, index) => {
+    const pax = sbState.names[index]?.surname || sbState.names[index]?.raw || 'PASSENGER';
+    const type = sbPaxLabel(sbState.names[index]);
+    sbPrint(` ${index + 2}.TE ${ticketNo}-BD ${pax} ${type} ${sbState.officeId}*ATW ${sbSabreFooterStamp()}*I`);
+  });
 }
 
 /* ---------------------------------------------------------------------
