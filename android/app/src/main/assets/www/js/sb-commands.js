@@ -306,20 +306,27 @@ function cmdWpa(raw) {
     pax: Math.max(sbState.names.length, 1)
   };
 
-  // Exact Sabre Screenshot 1 output
-  sbPrint('');
-  sbPrint('          BASE FARE      EQUIV AMOUNT    TAXES/FEES/CHARGES');
-  sbPrint(`1-        USD${fare.baseUsd.toFixed(2)}          BDT${fare.baseBdt}             BDT${fare.tax}XT      BDT${fare.total}ADT           TOTAL:   BDT${fare.total}`);
-  sbPrint('     XT       500BD            4000UT                25000W             447E5');
-  sbPrint('             4328YQ            1237P8                1237P7');
-  sbPrint(`             ${fare.baseUsd.toFixed(2)}             ${fare.baseBdt}                 ${fare.tax}`);
-  sbPrint('');
-  sbPrint(`ADT-1     ${fare.fareBasis}`);
-  sbPrint(fare.route);
-  sbPrint(`RATE USED 1USD-${fare.rate.toFixed(2)}BDT`);
-  sbPrint('NONEND-SUBJ TO PENALTY');
-  sbPrint(`VALIDATING CARRIER SPECIFIED - ${fare.carrier}`);
-  sbPrint('BRANDED FARE /BASIC-BASIC');
+  // Fare load reply: keep the command echo above this reply and render the
+  // host response as one compact block, like Sabre Agency Workspace.
+  const printFare = text => sbPrint(text, 'fare-output');
+  printFare('');
+  printFare('          BASE FARE      EQUIV AMOUNT    TAXES/FEES/CHARGES');
+  printFare(`1-        USD${fare.baseUsd.toFixed(2)}          BDT${fare.baseBdt}             BDT${fare.tax}XT      BDT${fare.total}ADT           TOTAL:   BDT${fare.total}`);
+  printFare('     XT       500BD            4000UT                25000W             447E5');
+  printFare('             4328YQ            1237P8                1237P7');
+  printFare(`             ${fare.baseUsd.toFixed(2)}             ${fare.baseBdt}                 ${fare.tax}`);
+  printFare('                                                   FOP FEES PER TICKET MAY APPLY');
+  printFare('');
+  printFare(`ADT-1     ${fare.fareBasis}`);
+  printFare(fare.route);
+  printFare(`RATE USED 1USD-${fare.rate.toFixed(2)}BDT`);
+  printFare('CHNG FEE APPLY/REFUND FEE/APPLY/NO SHOW FEE APPLY');
+  printFare(`VALIDATING CARRIER SPECIFIED - ${fare.carrier}`);
+  printFare('BRANDED FARE /ECONOMY VALUE-ECONOMY VALUE');
+  printFare('FORM OF PAYMENT FEES PER TICKET MAY APPLY');
+  printFare('ADT          DESCRIPTION                              FEE       TKT TOTAL');
+  printFare('             0BFCA - CC FEES                           0              0');
+  printFare(`             0BFCA - CC NBR BEGINS WITH 223529       0          ${fare.total}`);
 }
 
 function cmdPq() {
@@ -332,7 +339,9 @@ function cmdPq() {
 }
 
 function cmdDisplayPq() {
-  if (!sbState.privateFare || !sbState.pqStoredInPNR) {
+  // A stored PNR may retain the fare summary even if the in-memory PQ flag
+  // was lost while redisplaying it.  Rebuild its display record when possible.
+  if (!sbState.privateFare && !sbState.fareQuote) {
     sbWarn("NO FARE RECORD EXISTS");
     return;
   }
@@ -522,6 +531,8 @@ function sendCmd() {
     if (term) term.innerHTML = '';
   }
   sbEcho(val);
-  sbParse(val);
+  // On the Sabre keyboard the key beside Enter is Cross of Lorraine (¥).
+  // It joins entries, e.g. 6S¥ER¥IR, rather than being literal text.
+  val.split(/[¥☨‡]/).map(entry => entry.trim()).filter(Boolean).forEach(sbParse);
   input.value = '';
 }

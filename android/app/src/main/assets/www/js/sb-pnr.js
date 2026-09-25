@@ -105,7 +105,7 @@ function sbEcho(cmd) {
   const term = document.getElementById('termArea');
   if (term.querySelector('.ph')) term.innerHTML = '';
   const echo = document.createElement('div');
-  echo.className = 'line-echo';
+  echo.className = /^WPA/.test(cmd.trim()) ? 'line-echo fare-command' : 'line-echo';
   const text = cmd.toUpperCase().trim();
   echo.textContent = text.endsWith('«') ? text : (text + '«');
   term.appendChild(echo);

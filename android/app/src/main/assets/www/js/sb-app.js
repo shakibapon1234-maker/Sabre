@@ -95,6 +95,18 @@ function sbUseHistory(sendNow) {
 }
 
 document.getElementById('cmdInput').addEventListener('keydown', e => {
+  // Sabre keyboard equivalents: +/= is Display (*) and the quote/backslash
+  // key immediately left of Enter is Cross of Lorraine (¥), the end-item key.
+  if (e.code === 'Equal') {
+    e.preventDefault();
+    e.target.setRangeText('*', e.target.selectionStart, e.target.selectionEnd, 'end');
+    return;
+  }
+  if (e.code === 'Quote' || e.code === 'Backslash') {
+    e.preventDefault();
+    e.target.setRangeText('¥', e.target.selectionStart, e.target.selectionEnd, 'end');
+    return;
+  }
   if (e.key === 'Enter') sendCmd();
   if (e.altKey && e.key === 'ArrowUp') { e.preventDefault(); sbRecallHistory(-1); }
   if (e.altKey && e.key === 'ArrowDown') { e.preventDefault(); sbRecallHistory(1); }
