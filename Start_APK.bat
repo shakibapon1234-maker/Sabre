@@ -26,7 +26,7 @@ if errorlevel 1 (
 )
 
 echo Launching...
-"%ADB%" shell am start -n com.sabre.training/.LicenseActivity
+"%ADB%" shell am start -n com.sabre.training/.MainActivity
 
 echo.
 pause

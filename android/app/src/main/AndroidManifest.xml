@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <!-- Used only to load bundled local web assets in the WebView; no external calls are made -->
+    <!-- Required for the account and device-verification service used by the WebView. -->
     <uses-permission android:name="android.permission.INTERNET" />
 
     <application
@@ -12,7 +12,7 @@
         android:usesCleartextTraffic="false">
 
         <activity
-            android:name=".LicenseActivity"
+            android:name=".MainActivity"
             android:exported="true"
             android:screenOrientation="landscape"
             android:theme="@style/AppTheme">
@@ -21,12 +21,6 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-
-        <activity
-            android:name=".MainActivity"
-            android:exported="false"
-            android:screenOrientation="landscape"
-            android:theme="@style/AppTheme" />
 
     </application>
 </manifest>

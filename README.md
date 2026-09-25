@@ -35,11 +35,9 @@ sabre/
 ├── package.json                   # Electron/electron-builder কনফিগ
 ├── Start_Desktop.bat              # ডেস্কটপ লঞ্চার (npm install অটো-চেক)
 ├── Start.bat                      # এক-ক্লিক ডেস্কটপ স্টার্টার
-├── Admin_License_Generator.html   # অফলাইন লাইসেন্স কী জেনারেটর
-├── Generate_License.bat           # লঞ্চার
 ├── SABRE_COMMANDS_CHEATSHEET.md   # কমান্ড রেফারেন্স
 ├── android/                       # Android Gradle প্রজেক্ট
-│   ├── app/src/main/java/…/MainActivity.java, LicenseActivity.java, LicenseManager.java
+│   ├── app/src/main/java/…/MainActivity.java  # WebView host; account/device gate is in js/auth.js
 │   ├── app/src/main/assets/www/   # index.html + js/ (সিঙ্কড কপি)
 │   └── app/src/main/AndroidManifest.xml
 ├── Build_APK.bat                  # assets sync + gradlew assembleRelease
@@ -74,7 +72,7 @@ gradlew assembleRelease
 ```
 অথবা রুট থেকে `Build_APK.bat` চালান (এটা প্রথমে `js/` ও `index.html` কে `android/app/src/main/assets/www/`-এ সিঙ্ক করে, তারপর `gradlew assembleRelease` চালায়)। এমুলেটর/ডিভাইসে ইনস্টল ও রান করতে `Start_APK.bat` ব্যবহার করুন।
 
-**লাইসেন্স জেনারেট করতে:** `Admin_License_Generator.html` ব্রাউজারে ওপেন করুন বা `Generate_License.bat` চালান — `SBR-AAAA-BBBB-CCCC` ফরম্যাটে ১–৫০টা কী ব্যাচে জেনারেট করা যায়। অ্যাপ প্রথমবার ওপেন করলে `LicenseActivity` স্ক্রিনে এই কী বসাতে হবে।
+**Android access:** the APK uses the same Supabase account and device-limit gate as the web and desktop versions. Apply `SUPABASE_SETUP.md` before distributing an APK.
 
 ---
 

@@ -25,6 +25,9 @@ create index if not exists license_events_user_event_idx on public.license_event
 alter table public.profiles enable row level security;
 alter table public.devices enable row level security;
 alter table public.license_events enable row level security;
+drop policy if exists "profile owner read" on public.profiles;
+drop policy if exists "device owner read" on public.devices;
+drop policy if exists "event owner read" on public.license_events;
 create policy "profile owner read" on public.profiles for select to authenticated using (id=auth.uid());
 create policy "device owner read" on public.devices for select to authenticated using (user_id=auth.uid());
 create policy "event owner read" on public.license_events for select to authenticated using (user_id=auth.uid());
