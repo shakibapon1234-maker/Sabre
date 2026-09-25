@@ -157,6 +157,12 @@ function cmdTicketingArrangement(raw) {
 function cmdSSR(raw) {
   const body = raw.replace(/^3/, '').trim();
   if (!body) { sbWarn("FORMAT: 3<SSRCODE>/P1  e.g. 3VGML/1"); return; }
+  if (/^DOCS(?:\/|$)/i.test(body)) {
+    const carrier = sbState.privateFare?.carrier || sbState.booked[0]?.al || 'MH';
+    sbState.documents.push({ raw: body.toUpperCase(), carrier });
+    sbPrint('*');
+    return;
+  }
   const paxRefMatch = body.match(/\/P?(\d+)$/i);
   if (paxRefMatch) {
     const paxNum = parseInt(paxRefMatch[1], 10);
@@ -363,26 +369,35 @@ function cmdDisplayPq() {
     ? (sbState.names[0].surname ? `${sbState.names[0].surname}/${sbState.names[0].first} ${sbState.names[0].title}`.trim() : sbState.names[0].raw)
     : 'APON/SHAKIB MR';
 
-  // Exact Sabre Screenshot 2 output
-  sbPrint('');
-  sbPrint('FARE RECORD-ADT-AUTO PRICED      -ATPC');
-  sbPrint('PQ 1                                    INPUT PTC - ADT');
-  sbPrint('');
-  sbPrint(` 1.1${paxName}`);
-  sbPrint(`VALIDATING CARRIER - ${fare.carrier}`);
-  sbPrint(` 1 O${fare.origin} ${fare.carrier} ${fare.flightNo}${fare.cls} ${fare.date} ${fare.depTime}  ${fare.fareBasis}       OK ${fare.date}${fare.date}25K`);
-  sbPrint(`   ${fare.dest}`);
-  sbPrint('');
-  sbPrint('      BASE FARE       EQUIV AMT    TAXES/FEES/CHARGES       TOTAL');
-  sbPrint(`      USD${fare.baseUsd.toFixed(2)}        BDT${fare.baseBdt}              ${fare.tax}XT     BDT${fare.total}`);
-  sbPrint(' XT       500BD          4000UT              25000W         447E5');
-  sbPrint('         4328YQ          1237P8              1237P7');
-  sbPrint(fare.route);
-  sbPrint('');
-  sbPrint('NONEND-SUBJ TO PENALTY');
-  sbPrint('');
-  sbPrint('PRICING TRAILER MSG');
-  sbPrint(`VALIDATING CARRIER SPECIFIED - ${fare.carrier}`);
+  // Full *PQ fare record, including the payment-fee and pricing-trailer area.
+  const printFare = text => sbPrint(text, 'fare-output');
+  printFare('');
+  printFare('FARE RECORD-ADT-AUTO PRICED      -ATPC');
+  printFare('PQ 1                                    INPUT PTC - ADT');
+  printFare('');
+  printFare(` 1.1${paxName}`);
+  printFare(`VALIDATING CARRIER - ${fare.carrier}`);
+  printFare(` 1 O${fare.origin} ${fare.carrier} ${fare.flightNo}${fare.cls} ${fare.date} ${fare.depTime}  ${fare.fareBasis}       OK ${fare.date}${fare.date}25K`);
+  printFare(`   ${fare.dest}`);
+  printFare('');
+  printFare('      BASE FARE       EQUIV AMT    TAXES/FEES/CHARGES       TOTAL');
+  printFare(`      USD${fare.baseUsd.toFixed(2)}        BDT${fare.baseBdt}              ${fare.tax}XT     BDT${fare.total}`);
+  printFare(' XT       500BD          4000UT              25000W         447E5');
+  printFare('         4328YQ          1237P8              1237P7');
+  printFare(fare.route);
+  printFare('');
+  printFare('CHNG FEE APPLY/REFUND FEE/APPLY/NO SHOW FEE APPLY');
+  printFare('');
+  printFare('ONE OR MORE FORM OF PAYMENT FEES MAY APPLY');
+  printFare('ACTUAL TOTAL WILL BE BASED ON FORM OF PAYMENT USED');
+  printFare('FEE CODE     DESCRIPTION                         FEE    TKT TOTAL');
+  printFare(`OBFCAX       - ANY CC                              0       ${fare.total}`);
+  printFare(`OBFCAX       - CC NBR BEGINS WITH 223529          0       ${fare.total}`);
+  printFare('');
+  printFare('PRICING TRAILER MSG');
+  printFare('¥');
+  printFare(`3DOCS/P/BD/A3863636/BD/20MAY95/M/${paxName.replace(/\s+(MR|MS|MRS)$/i, '')}-.1«`);
+  printFare('*');
 }
 
 function cmdDisplayItinerary() {
@@ -416,6 +431,46 @@ function cmdDisplaySSR() {
   if (!sbState.ssrEntries.length) { sbWarn("NO SSR IN PNR"); return; }
   sbPrint("SPECIAL SERVICE REQUEST");
   sbState.ssrEntries.forEach((s, i) => sbPrint(` ${i + 1} ${s}`));
+}
+
+function cmdDisplayDocs() {
+  if (!sbState.documents.length) { sbWarn('NO PASSENGER DOCUMENTS IN PNR'); return; }
+  const print = text => sbPrint(text, 'fare-output');
+  const pax = sbState.names[0]?.raw || 'PASSENGER';
+  print('GENERAL FACTS');
+  sbState.documents.forEach((doc, index) => {
+    const docText = doc.raw.replace(/^DOCS\//, '').replace(/-\d+\.\d+$/, '');
+    const fields = docText.split('/');
+    const firstPart = fields.slice(0, 3).join('/');
+    const remainder = fields.slice(3).join('/');
+    print(` ${index + 1}.SSR DOCS ${doc.carrier} HK1/${firstPart}/  1.1 ${pax}`);
+    if (remainder) print(`      ${remainder}`);
+  });
+}
+
+/* ---------------------------------------------------------------------
+   PRINTER ASSIGNMENT — required once per running session before ticketing
+   W*BD -> DSIV<id> -> PTR/<id>
+--------------------------------------------------------------------- */
+function cmdPrinterWorkArea() {
+  sbPrint('OK-0008');
+}
+
+function cmdPrinterAssign(raw) {
+  const id = raw.replace(/^DSIV/, '').trim().toUpperCase();
+  if (!id) { sbWarn('FORMAT: DSIV<PRINTER ID>  e.g. DSIVE8C987'); return; }
+  sbState.printerId = id;
+  sbState.printerAssigned = true;
+  sbState.printerDesignated = false;
+  sbPrint('OK PTR ASSIGNED');
+}
+
+function cmdPrinterDesignate(raw) {
+  const id = raw.replace(/^PTR\//, '').trim().toUpperCase();
+  if (!sbState.printerAssigned) { sbWarn('NO PTR ASSIGNED - ENTER DSIV<PRINTER ID> FIRST'); return; }
+  if (!id || id !== sbState.printerId) { sbWarn(`INVALID PRINTER ID - ENTER PTR/${sbState.printerId}`); return; }
+  sbState.printerDesignated = true;
+  sbPrint('PRINTER DESIGNATED');
 }
 
 function cmdRedisplay() {
@@ -453,6 +508,7 @@ function cmdRetrieve(raw) {
 function cmdIssueTicket() {
   if (!sbState.locator || !sbState.ended) { sbWarn("PNR NOT SAVED - END TRANSACTION (E) FIRST"); return; }
   if (!sbState.fareQuote) { sbWarn("NO FARE ON FILE - PRICE THE PNR FIRST (WPNCB)"); return; }
+  if (!sbState.printerDesignated) { sbWarn('PRINTER NOT DESIGNATED - ENTER W*BD, DSIV<PRINTER ID>, THEN PTR/<PRINTER ID>'); return; }
   if (sbState.ticketed) { sbWarn("ALREADY TICKETED - " + sbState.eticketNumber); return; }
   sbState.ticketed = true;
   sbState.eticketNumber = "657-" + Math.floor(1000000000 + Math.random() * 8999999999).toString().slice(0, 10);
@@ -491,6 +547,9 @@ function sbParse(raw) {
     if (typeof cmdFareShopJR === 'function') return cmdFareShopJR();
   }
   if (/^W\/-[A-Z][A-Z .'-]*$/.test(upper)) return cmdEncodeDecode(upper.slice(3));
+  if (/^W\*BD$/.test(upper)) return cmdPrinterWorkArea();
+  if (/^DSIV[A-Z0-9]+$/.test(upper)) return cmdPrinterAssign(upper);
+  if (/^PTR\/[A-Z0-9]+$/.test(upper)) return cmdPrinterDesignate(upper);
   if (/^WPA(?:\s*([A-Z0-9]{2})|\s+(.+))?$/.test(upper) || /^WP$/i.test(upper)) return cmdWpa(upper);
   if (/^\*PQ(?:\s*\d+)?$|^\*PQS$|^3PQ$|^PQ$/i.test(upper)) return cmdDisplayPq();
     if (/^1\d{2}[A-Z]{3}[A-Z]{6}$/.test(upper)) return cmdAvailability(upper);
@@ -507,7 +566,8 @@ function sbParse(raw) {
   if (/^\*P$|^\*9$|^\*P9$/.test(upper)) return cmdDisplayPhone();
   if (/^\*7$|^\*P7$/.test(upper)) return cmdDisplayTicketing();
   if (/^\*6$|^\*P6$/.test(upper)) return cmdDisplayReceived();
-  if (/^\*3$|^\*P3D?$|^\*SSR$/.test(upper)) return cmdDisplaySSR();
+  if (/^\*P3D$/.test(upper)) return cmdDisplayDocs();
+  if (/^\*3$|^\*P3?$|^\*SSR$/.test(upper)) return cmdDisplaySSR();
   if (/^\*A$|^\*R$|^\*$/.test(upper)) return cmdRedisplay();
   if (/^\*[A-Z0-9]{5,6}$/.test(upper)) return cmdRetrieve(upper);
   if (/^WTP?$/.test(upper)) return cmdIssueTicket();

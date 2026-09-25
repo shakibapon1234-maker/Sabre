@@ -22,6 +22,10 @@ function sbEmptyState() {
     receivedFrom: null,
     ticketingArrangement: null,
     ssrEntries: [],
+    documents: [],          // DOCS SSR entries (passport/APIS information)
+    printerId: null,        // ticket printer selected for this running session
+    printerAssigned: false,
+    printerDesignated: false,
     fareQuote: null,        // { base, tax, total, currency }
     privateFare: null,      // fare loaded through WPA <carrier> then PQ
     ticketed: false,
@@ -276,8 +280,13 @@ function sbRenderPNR() {
   if (sbState.locator) {
     lines.push("PASSENGER DETAIL FIELD EXISTS - USE PD TO DISPLAY");
     lines.push("GENERAL FACTS");
-    if (sbState.ssrEntries.length) {
+    if (sbState.ssrEntries.length || sbState.documents.length) {
       sbState.ssrEntries.forEach((s, i) => lines.push(` ${i + 1}.${s}`));
+      sbState.documents.forEach((doc, i) => {
+        const pax = sbState.names[0]?.raw || 'PASSENGER';
+        const docText = doc.raw.replace(/^DOCS\//, '').replace(/-\d+\.\d+$/, '');
+        lines.push(` ${sbState.ssrEntries.length + i + 1}.SSR DOCS ${doc.carrier} HK1/${docText}  1.1 ${pax}`);
+      });
     } else {
       const mainAl = sbState.booked[0]?.al || '1B';
       const d = new Date();
