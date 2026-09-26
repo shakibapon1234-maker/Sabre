@@ -16,13 +16,13 @@ function sbEmptyState() {
     dateStamp: null,
     names: [],             // [{ raw, surname, first, title }]
     _availCache: null,      // last availability options shown (for sell)
-    booked: [],             // sold segments in the PNR (flat list — a
-                             // connection contributes 2 consecutive entries)
+    booked: [],             // sold segments in the PNR (flat list)
     phones: [],
     receivedFrom: null,
     ticketingArrangement: null,
     ssrEntries: [],
     documents: [],          // DOCS SSR entries (passport/APIS information)
+    remarks: [],            // 5C/ general remark entries
     printerId: null,        // ticket printer selected for this running session
     printerAssigned: false,
     printerDesignated: false,
@@ -32,6 +32,9 @@ function sbEmptyState() {
     eticketNumber: null,
     ticketNumbers: [],
     invoiced: false,
+    voided: false,          // ticket was voided
+    voidedTicketNo: null,   // ticket number that was voided
+    refunded: false,        // refund was processed
     ended: false
   };
 }
@@ -325,6 +328,20 @@ function sbRenderPNR() {
   // Received From
   if (sbState.receivedFrom) {
     lines.push(`RECEIVED FROM - ${sbState.receivedFrom}`);
+  }
+
+  // General Remarks
+  if (sbState.remarks && sbState.remarks.length) {
+    lines.push('GENERAL REMARKS');
+    sbState.remarks.forEach((r, i) => lines.push(` ${i + 1}.${r}`));
+  }
+
+  // Void / refund notices
+  if (sbState.voided) {
+    lines.push(`TICKET ${sbState.voidedTicketNo} - VOIDED`);
+  }
+  if (sbState.refunded) {
+    lines.push('REFUND PROCESSED');
   }
 
   // Footer line matching 3MUL.3MUL*ATW 0059/24SEP26 PUYPQE H M

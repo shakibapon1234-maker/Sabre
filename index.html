@@ -672,6 +672,12 @@
 <script src="js/sb-pfkeys.js"></script>
 <script src="js/sb-fareshop.js"></script>
 <script src="js/auth.js"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    if (typeof sbCheckUrlHash === 'function') sbCheckUrlHash();
+  });
+</script>
+
 
 </body>
 </html>

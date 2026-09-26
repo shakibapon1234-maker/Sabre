@@ -227,6 +227,8 @@ function cmdEndTransaction(redisplay) {
   if (sbState.privateFare && sbState.pqPending) {
     sbState.pqStoredInPNR = true;
   }
+  // Auto-persist to localStorage store so *<LOCATOR> retrieves it later
+  if (typeof sbPnrStorePut === 'function') sbPnrStorePut(sbState);
   sbPrint('DIRECT CONNECT IN PROGRESS, PLEASE WAIT', 'line-pnr');
   sbPrint('', 'line-pnr');
   if (redisplay) {
@@ -510,15 +512,210 @@ function cmdIgnoreRedisplay() {
   sbSyncSidePanel();
 }
 
+/* =====================================================================
+   PNR STORE — save every ended PNR to localStorage and retrieve by
+   locator, list all saved PNRs, or share via URL hash.
+   ===================================================================== */
+const SB_PNR_STORE_KEY = 'sabre_pnr_store_v1';
+
+function sbPnrStoreLoad() {
+  try {
+    const raw = localStorage.getItem(SB_PNR_STORE_KEY);
+    if (raw) { const p = JSON.parse(raw); if (typeof p === 'object' && p) return p; }
+  } catch (e) {}
+  return {};
+}
+
+function sbPnrStoreSave(store) {
+  try { localStorage.setItem(SB_PNR_STORE_KEY, JSON.stringify(store)); } catch (e) {}
+}
+
+/* Called by cmdEndTransaction — snapshot current state into the store. */
+function sbPnrStorePut(state) {
+  if (!state.locator) return;
+  const store = sbPnrStoreLoad();
+  store[state.locator] = {
+    locator: state.locator,
+    savedAt: sbSabreFooterStamp(),
+    names: state.names,
+    booked: state.booked,
+    phones: state.phones,
+    receivedFrom: state.receivedFrom,
+    ticketingArrangement: state.ticketingArrangement,
+    ssrEntries: state.ssrEntries,
+    documents: state.documents,
+    remarks: state.remarks || [],
+    fareQuote: state.fareQuote,
+    privateFare: state.privateFare,
+    ticketed: state.ticketed,
+    eticketNumber: state.eticketNumber,
+    ticketNumbers: state.ticketNumbers || [],
+    invoiced: state.invoiced,
+    voided: state.voided || false,
+    voidedTicketNo: state.voidedTicketNo || null,
+    refunded: state.refunded || false,
+    officeId: state.officeId,
+    agentSine: state.agentSine,
+    dateStamp: state.dateStamp,
+    ended: true
+  };
+  const keys = Object.keys(store);
+  if (keys.length > 100) delete store[keys[0]]; // keep last 100
+  sbPnrStoreSave(store);
+}
+
 /* ---------------------------------------------------------------------
-   *<LOCATOR> — retrieve a stored PNR (only the lesson one is known)
+   *<LOCATOR> — retrieve any saved PNR from localStorage or lesson
 --------------------------------------------------------------------- */
 function cmdRetrieve(raw) {
   const loc = raw.replace(/^\*/, '').trim().toUpperCase();
   if (loc === '' || loc === 'R') { cmdRedisplay(); return; }
   if (sbState.locator === loc) { sbPrint(sbRenderPNR()); return; }
-  if (loc === "K7QZLM") { sbLoadLessonPNR(); return; }
+  if (loc === 'K7QZLM') { sbLoadLessonPNR(); return; }
+
+  const snap = sbPnrStoreLoad()[loc];
+  if (snap) {
+    sbState = { ...sbEmptyState(), ...snap };
+    sbPrint('DIRECT CONNECT IN PROGRESS, PLEASE WAIT', 'line-pnr');
+    sbPrint('', 'line-pnr');
+    sbPrint(snap.locator, 'line-pnr');
+    sbPrint(sbRenderPNR(), 'line-pnr');
+    sbSyncSidePanel();
+    return;
+  }
   sbWarn(`RECORD LOCATOR ${loc} NOT FOUND IN TRAINING DATABASE`);
+}
+
+/* ---------------------------------------------------------------------
+   *ALL / OPEN / OPENPNR — display all saved PNRs
+--------------------------------------------------------------------- */
+function cmdOpenAllPNR() {
+  const store = sbPnrStoreLoad();
+  const keys = Object.keys(store);
+
+  sbPrint('SAVED PNR LIST');
+  sbPrint(` ${'LOC'.padEnd(7)} ${'PAX NAME'.padEnd(24)} ${'FLIGHT'.padEnd(9)} ${'DATE'.padEnd(7)} ROUTE     STATUS`);
+  sbPrint('─'.repeat(72));
+  // Built-in lesson PNR always first
+  sbPrint(` K7QZLM  RAHMAN/ANIS MR          BG555     25DEC   DACSIN    OPEN  (LESSON)`);
+
+  if (keys.length === 0) {
+    sbPrint('');
+    sbPrint('NO USER-SAVED PNRs — USE ER TO SAVE A PNR');
+  } else {
+    keys.forEach(loc => {
+      const p = store[loc];
+      const name = (p.names?.[0]?.raw || 'UNKNOWN').slice(0, 23).padEnd(23);
+      const seg  = p.booked?.[0];
+      const fl   = seg ? `${seg.al}${seg.fn}`.padEnd(9) : '---'.padEnd(9);
+      const dt   = (seg?.date || '---').padEnd(7);
+      const rt   = seg ? `${seg.dep}${seg.arr}`.padEnd(9) : '---'.padEnd(9);
+      const st   = p.ticketed ? 'TKTED' : (p.voided ? 'VOID ' : 'OPEN ');
+      sbPrint(` ${loc.padEnd(7)}  ${name} ${fl} ${dt} ${rt} ${st}`);
+    });
+  }
+
+  sbPrint('─'.repeat(72));
+  sbPrint(`TOTAL: ${keys.length + 1} PNR(S)  — TYPE *<LOCATOR> TO RETRIEVE  |  SHAREPNR TO SHARE`);
+}
+
+/* ---------------------------------------------------------------------
+   SHAREPNR — copy a deep-link URL and show a share modal
+   URL format:  <base>#PNR=<LOCATOR>
+--------------------------------------------------------------------- */
+function cmdSharePNR() {
+  if (!sbState.locator || !sbState.ended) {
+    sbWarn('NO SAVED PNR TO SHARE — END TRANSACTION (ER) FIRST');
+    return;
+  }
+  sbPnrStorePut(sbState); // ensure latest state is persisted
+  const base = window.location.href.split('#')[0];
+  const url  = `${base}#PNR=${sbState.locator}`;
+
+  sbPrint(`SHARE URL: ${url}`);
+  sbPrint(`LOCATOR  : ${sbState.locator}`);
+  sbPrint('RECIPIENT TYPES  *' + sbState.locator + '  TO RETRIEVE THIS PNR');
+
+  if (navigator.clipboard?.writeText) {
+    navigator.clipboard.writeText(url).then(() => sbPrint('✓ URL COPIED TO CLIPBOARD'));
+  }
+  sbShowShareModal(sbState.locator, url);
+}
+
+function sbShowShareModal(locator, url) {
+  let modal = document.getElementById('sbShareModal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'sbShareModal';
+    modal.style.cssText = [
+      'position:fixed;top:0;left:0;right:0;bottom:0;',
+      'background:rgba(0,0,0,0.78);z-index:9999;',
+      'display:flex;align-items:center;justify-content:center;'
+    ].join('');
+    document.body.appendChild(modal);
+  }
+  modal.innerHTML = `
+    <div style="background:#1b2330;border:1px solid #3a4457;border-radius:10px;
+                padding:28px 32px;min-width:400px;max-width:92vw;
+                color:#eef0f3;font-family:'Consolas',monospace;">
+      <div style="font-size:15px;font-weight:700;color:#13a3a0;margin-bottom:14px;">&#x1F4E4; SHARE PNR</div>
+      <div style="font-size:11px;color:#8992a3;margin-bottom:4px;">PNR LOCATOR</div>
+      <div style="font-size:22px;font-weight:800;letter-spacing:5px;color:#c8472f;margin-bottom:14px;">${locator}</div>
+      <div style="font-size:11px;color:#8992a3;margin-bottom:4px;">SHARE LINK (click to copy)</div>
+      <div id="sbShareUrlText"
+           onclick="sbCopyShareUrl()"
+           style="background:#141a24;border:1px solid #2b3547;border-radius:5px;
+                  padding:10px 12px;font-size:11px;color:#13a3a0;
+                  word-break:break-all;cursor:pointer;">${url}</div>
+      <div id="sbShareCopyMsg" style="font-size:11px;color:#13a3a0;height:18px;margin-top:5px;"></div>
+      <div style="font-size:11px;color:#8992a3;margin-top:4px;">
+        Recipient opens the link, then types
+        <span style="color:#eef0f3">*${locator}</span> to retrieve.
+      </div>
+      <div style="display:flex;gap:10px;margin-top:18px;">
+        <button onclick="sbCopyShareUrl()"
+                style="flex:1;padding:9px;background:#13a3a0;border:none;
+                       border-radius:5px;color:#fff;font-weight:700;cursor:pointer;
+                       font-family:inherit;">
+          &#x1F4CB; COPY LINK
+        </button>
+        <button onclick="document.getElementById('sbShareModal').style.display='none'"
+                style="flex:1;padding:9px;background:#2b3547;border:none;
+                       border-radius:5px;color:#eef0f3;font-weight:700;cursor:pointer;
+                       font-family:inherit;">
+          CLOSE
+        </button>
+      </div>
+    </div>`;
+  modal._url = url;
+  modal.style.display = 'flex';
+}
+
+function sbCopyShareUrl() {
+  const modal = document.getElementById('sbShareModal');
+  const url   = modal?._url || '';
+  const msg   = document.getElementById('sbShareCopyMsg');
+  if (navigator.clipboard && url) {
+    navigator.clipboard.writeText(url)
+      .then(() => { if (msg) msg.textContent = '✓ COPIED TO CLIPBOARD!'; });
+  } else {
+    const el = document.getElementById('sbShareUrlText');
+    if (el) { const r = document.createRange(); r.selectNodeContents(el); window.getSelection().removeAllRanges(); window.getSelection().addRange(r); }
+    if (msg) msg.textContent = 'SELECT & COPY MANUALLY (Ctrl+C)';
+  }
+}
+
+/* Auto-retrieve from URL hash on page load: #PNR=K7QZLM */
+function sbCheckUrlHash() {
+  const m = window.location.hash.match(/[#&]PNR=([A-Z0-9]{5,7})/i);
+  if (!m) return;
+  const loc = m[1].toUpperCase();
+  window.history.replaceState(null, '', window.location.pathname + window.location.search);
+  setTimeout(() => {
+    sbEcho('*' + loc);
+    cmdRetrieve('*' + loc);
+    sbPrint('AUTO-RETRIEVED FROM SHARE LINK: ' + loc, 'line-pnr');
+  }, 600);
 }
 
 /* ---------------------------------------------------------------------
@@ -565,6 +762,247 @@ function cmdIgnore() {
 }
 
 /* ---------------------------------------------------------------------
+   XE<n> / XK<n> — delete a PNR segment by line number
+   e.g. XE1, XK2
+--------------------------------------------------------------------- */
+function cmdSegmentCancel(raw) {
+  const m = raw.match(/^X[EK](\d+)$/);
+  if (!m) { sbWarn('FORMAT: XE<N>  e.g. XE1  (delete segment number N)'); return; }
+  const idx = parseInt(m[1], 10) - 1;
+  if (!sbState.booked.length) { sbWarn('NO SEGMENTS IN PNR'); return; }
+  if (idx < 0 || idx >= sbState.booked.length) {
+    sbWarn(`SEGMENT ${m[1]} NOT FOUND — PNR HAS ${sbState.booked.length} SEGMENT(S)`);
+    return;
+  }
+  const removed = sbState.booked.splice(idx, 1)[0];
+  sbPrint(`SEGMENT ${m[1]} CANCELLED: ${removed.al}${removed.fn} ${removed.date} ${removed.dep}${removed.arr}`);
+  sbState.ended = false;
+  sbSyncSidePanel();
+}
+
+/* ---------------------------------------------------------------------
+   4/<text>  — OSI (Other Service Information)
+   e.g.  4/MH FREQUENT FLYER 123456789
+--------------------------------------------------------------------- */
+function cmdOSI(raw) {
+  const body = raw.replace(/^4\s*\/\s*/, '').trim();
+  if (!body) { sbWarn('FORMAT: 4/<AIRLINE> <MESSAGE>  e.g. 4/BG FREQUENT FLYER NO 123456'); return; }
+  if (!sbState.names.length) { sbWarn('MUST HAVE AT LEAST ONE NAME BEFORE OSI'); return; }
+  const upper = body.toUpperCase();
+  const carrier = sbState.booked[0]?.al || '1B';
+  sbState.ssrEntries.push({ text: `OSI ${carrier} ${upper}`, paxRef: 1 });
+  sbPrint('*');
+}
+
+/* ---------------------------------------------------------------------
+   5C/<text>  — General Remarks / free-text remarks field
+   e.g.  5C/PLEASE ISSUE TICKET BEFORE 24SEP
+--------------------------------------------------------------------- */
+function cmdRemarks(raw) {
+  const body = raw.replace(/^5C?\s*\/\s*/, '').trim();
+  if (!body) { sbWarn('FORMAT: 5C/<REMARK TEXT>  e.g. 5C/PLEASE ISSUE BEFORE 20DEC'); return; }
+  if (!sbState.remarks) sbState.remarks = [];
+  sbState.remarks.push(body.toUpperCase());
+  sbPrint('*');
+}
+
+/* ---------------------------------------------------------------------
+   *5 / *RM — display remarks
+--------------------------------------------------------------------- */
+function cmdDisplayRemarks() {
+  if (!sbState.remarks || !sbState.remarks.length) { sbWarn('NO REMARKS IN PNR'); return; }
+  sbPrint('GENERAL REMARKS');
+  sbState.remarks.forEach((r, i) => sbPrint(` ${i + 1}.${r}`));
+}
+
+/* ---------------------------------------------------------------------
+   VOID / WV<ticket_no>  — void a ticket (same-day only in real Sabre)
+   e.g.  VOID, WV6181234567890
+--------------------------------------------------------------------- */
+function cmdVoidTicket(raw) {
+  if (!sbState.ticketed || !sbState.eticketNumber) {
+    sbWarn('NO TICKET ON FILE TO VOID — ISSUE A TICKET FIRST');
+    return;
+  }
+  const ticketNo = (sbState.eticketNumber || '').replace('-', '');
+  const inputNo = raw.replace(/^WV/i, '').replace(/^VOID/i, '').trim();
+  if (inputNo && inputNo !== ticketNo && !sbState.ticketNumbers?.includes(inputNo)) {
+    sbWarn(`TICKET ${inputNo} NOT FOUND — CURRENT TICKET: ${ticketNo}`);
+    return;
+  }
+  sbState.voided = true;
+  sbState.ticketed = false;
+  sbState.invoiced = false;
+  sbState.voidedTicketNo = ticketNo;
+  sbPrint(`TICKET ${ticketNo} VOIDED`);
+  sbPrint('VOID TRANSACTION COMPLETE');
+  sbPrint(`${sbState.officeId}.${sbState.officeId}*ATW ${sbSabreFooterStamp()} ${sbState.locator} H M`);
+  sbSyncSidePanel();
+}
+
+/* ---------------------------------------------------------------------
+   RFND / REFUND — refund a voided or cancelled ticket
+   (training simulation only — not connected to BSP/ARC)
+--------------------------------------------------------------------- */
+function cmdRefund(raw) {
+  if (!sbState.voided && !sbState.ticketed) {
+    sbWarn('NO TICKET ON FILE FOR REFUND — ISSUE OR VOID A TICKET FIRST');
+    return;
+  }
+  const ticketNo = sbState.voidedTicketNo || (sbState.eticketNumber || '').replace('-', '');
+  const fare = sbState.fareQuote;
+  const penalty = Math.round((fare?.total || 0) * 0.10);
+  const refundable = (fare?.total || 0) - penalty;
+  sbPrint('REFUND CALCULATION');
+  sbPrint(`TICKET: ${ticketNo}`);
+  sbPrint(`TOTAL PAID   : BDT ${fare?.total || 0}`);
+  sbPrint(`CANCEL PENALTY: BDT ${penalty} (10% TRAINING RATE)`);
+  sbPrint(`REFUND AMOUNT : BDT ${refundable}`);
+  sbPrint('REFUND PROCESSED - TRAINING SIMULATION ONLY');
+  sbState.refunded = true;
+  sbState.voided = false;
+  sbState.ticketed = false;
+  sbSyncSidePanel();
+}
+
+/* ---------------------------------------------------------------------
+   REISSUE / WREISSUE — reissue ticket with new fare (training flow)
+   In real Sabre: REISSUE after PQ is loaded for the changed itinerary
+--------------------------------------------------------------------- */
+function cmdReissue() {
+  if (!sbState.ticketed && !sbState.voided) {
+    sbWarn('NO TICKET ON FILE TO REISSUE — ISSUE A TICKET FIRST');
+    return;
+  }
+  if (!sbState.fareQuote) {
+    sbWarn('NO FARE QUOTE ON FILE — ENTER WPA <AIRLINE> AND PQ FIRST');
+    return;
+  }
+  const oldTicketNo = sbState.eticketNumber || '';
+  sbState.eticketNumber = '618-' + Math.floor(1000000000 + Math.random() * 8999999999).toString().slice(0, 10);
+  const newTicketNo = sbState.eticketNumber.replace('-', '');
+  sbState.ticketed = true;
+  sbState.invoiced = true;
+  sbState.voided = false;
+  sbPrint('REISSUE TRANSACTION PROCESSED');
+  sbPrint(`OLD TICKET: ${oldTicketNo.replace('-', '')}`);
+  sbPrint(`NEW TICKET: ${newTicketNo}`);
+  sbPrint(`FARE  BDT${sbState.fareQuote.base}  TAX  BDT${sbState.fareQuote.tax}  TOTAL  BDT${sbState.fareQuote.total}`);
+  sbPrint('ETR MESSAGE PROCESSED');
+  sbPrint(sbState.locator);
+  sbSyncSidePanel();
+}
+
+/* ---------------------------------------------------------------------
+   WC<n><STATUS>  — change segment status code manually
+   e.g. WC1HK   → segment 1 set to HK
+        WC2UC   → segment 2 set to UC (unable to confirm)
+--------------------------------------------------------------------- */
+function cmdChangeStatus(raw) {
+  const m = raw.match(/^WC(\d+)([A-Z]{2})$/);
+  if (!m) { sbWarn('FORMAT: WC<N><STATUS>  e.g. WC1HK  WC2UC'); return; }
+  const idx = parseInt(m[1], 10) - 1;
+  const newStatus = m[2].toUpperCase();
+  const validStatuses = ['HK','SS','HL','UC','WL','GK','SA','PN','NO'];
+  if (!validStatuses.includes(newStatus)) {
+    sbWarn(`INVALID STATUS ${newStatus} — VALID: ${validStatuses.join(' ')}`);
+    return;
+  }
+  if (!sbState.booked.length || idx < 0 || idx >= sbState.booked.length) {
+    sbWarn(`SEGMENT ${m[1]} NOT FOUND`);
+    return;
+  }
+  const seg = sbState.booked[idx];
+  seg.status = newStatus + '1';
+  sbPrint(`SEGMENT ${m[1]} STATUS CHANGED TO ${newStatus}`);
+  sbPrint(`${seg.al}${seg.fn} ${seg.date} ${seg.dep}${seg.arr} ${seg.status}`);
+}
+
+/* ---------------------------------------------------------------------
+   WPQD / WPQD<n>  — delete stored price quote (PQ)
+   e.g. WPQD, WPQD1
+--------------------------------------------------------------------- */
+function cmdPqDelete(raw) {
+  if (!sbState.privateFare && !sbState.fareQuote) {
+    sbWarn('NO PRICE QUOTE EXISTS TO DELETE');
+    return;
+  }
+  sbState.privateFare = null;
+  sbState.fareQuote = null;
+  sbState.pqPriced = false;
+  sbState.pqPending = false;
+  sbState.pqStoredInPNR = false;
+  sbPrint('PRICE QUOTE DELETED');
+  sbPrint('*');
+}
+
+/* ---------------------------------------------------------------------
+   QEP / QS<queue>  — place PNR on a queue
+   e.g.  QEP  (end & place on queue)
+         QS14 (place on queue 14)
+         Q/   (queue count display)
+--------------------------------------------------------------------- */
+function cmdQueuePlace(raw) {
+  const upper = raw.trim().toUpperCase();
+  if (/^Q\/$/.test(upper)) {
+    sbPrint('QUEUE COUNTS:');
+    sbPrint(` Q  0  DEFAULT QUEUE      ${sbState.locator ? '1 PNR' : '0 PNR'}`);
+    sbPrint(` Q 14  TICKETING QUEUE    ${sbState.ticketed ? '0 PNR' : (sbState.locator ? '1 PNR' : '0 PNR')}`);
+    return;
+  }
+  if (!sbState.locator || !sbState.ended) {
+    sbWarn('NO ACTIVE PNR — SAVE PNR WITH E OR ER FIRST');
+    return;
+  }
+  const qNum = raw.match(/^QS(\d+)$/)?.[1] || raw.match(/^QEP(?:(\d+))?$/)?.[1] || '14';
+  sbPrint(`PNR ${sbState.locator} PLACED ON QUEUE ${qNum}`);
+  sbPrint(`${sbState.officeId}.${sbState.officeId}*ATW ${sbSabreFooterStamp()} ${sbState.locator} H M`);
+}
+
+/* ---------------------------------------------------------------------
+   CHANGE DOCS — modify existing DOCS SSR entry
+   Format: 3DOCS/P/<COUNTRY>/<DOCNO>/<NATIONALITY>/<DOB>/<GENDER>/<EXPIRY>/<SURNAME>/<FIRST>-1.<PAX>
+   Same as 3DOCS but replaces existing entry for that passenger
+--------------------------------------------------------------------- */
+function cmdChangeDocs(raw) {
+  // Delegate to cmdSSR which already handles DOCS — it adds a new entry.
+  // This wrapper first removes the old DOCS for the same paxRef, then re-adds.
+  const body = raw.replace(/^3/, '').trim();
+  const paxRef = Number(body.match(/-(?:1\.)?(\d+)$/)?.[1] || body.match(/\/P(\d+)$/i)?.[1] || 1);
+  // Remove previous DOCS for this paxRef
+  sbState.documents = sbState.documents.filter(d => d.paxRef !== paxRef);
+  cmdSSR(raw); // re-use existing SSR/DOCS handler
+  sbPrint('DOCS RECORD UPDATED');
+}
+
+/* ---------------------------------------------------------------------
+   *PE / *PD — display passenger details (combined: names, phones, SSR)
+--------------------------------------------------------------------- */
+function cmdDisplayPassengerDetail() {
+  sbPrint('PASSENGER DETAIL');
+  if (sbState.names.length) {
+    sbPrint('NAMES:');
+    sbState.names.forEach((n, i) => sbPrint(` ${i + 1}.${n.raw} - ${n.paxType || 'ADT'}${n.dob ? '/' + n.dob : ''}`));
+  }
+  if (sbState.phones.length) {
+    sbPrint('PHONES:');
+    sbState.phones.forEach((p, i) => sbPrint(` ${i + 1}.${p.raw}`));
+  }
+  if (sbState.ssrEntries.length) {
+    sbPrint('SSR:');
+    sbState.ssrEntries.forEach((s, i) => sbPrint(` ${i + 1}.${typeof s === 'string' ? s : s.text}`));
+  }
+  if (sbState.documents.length) {
+    sbPrint('DOCS:');
+    sbState.documents.forEach((d, i) => {
+      const pax = sbState.names[(d.paxRef || 1) - 1]?.raw || 'PASSENGER';
+      sbPrint(` ${i + 1}.SSR DOCS ${d.carrier} HK1/${d.raw.replace(/^DOCS\//, '').replace(/-\d+\.\d+$/, '')}  1.${d.paxRef} ${pax}`);
+    });
+  }
+  if (!sbState.names.length && !sbState.phones.length) sbWarn('NO PASSENGER DATA IN PNR');
+}
+
+/* ---------------------------------------------------------------------
    HELP — open the Command Helper popup (also reachable via the
    "🪄 Command Helper" button / F-key row "⋮" overflow)
 --------------------------------------------------------------------- */
@@ -591,31 +1029,46 @@ function sbParse(raw) {
   if (/^W[¥☨‡§]PQ\d+[¥☨‡§]ASQ[¥☨‡§]FINVAGT[¥☨‡§]K7$/.test(upper)) return cmdIssueTicket();
   if (/^WPA(?:\s*([A-Z0-9]{2})|\s+(.+))?$/.test(upper) || /^WP$/i.test(upper)) return cmdWpa(upper);
   if (/^\*PQ(?:\s*\d+)?$|^\*PQS$|^3PQ$|^PQ$/i.test(upper)) return cmdDisplayPq();
-    if (/^1\d{2}[A-Z]{3}[A-Z]{6}$/.test(upper)) return cmdAvailability(upper);
+  if (/^1\d{2}[A-Z]{3}[A-Z]{6}$/.test(upper)) return cmdAvailability(upper);
   if (/^0[A-Z]\d+$/.test(upper)) return cmdSell(upper);
   if (/^-[A-Z]/.test(upper)) return cmdName(upper);
   if (/^9/.test(upper)) return cmdPhone(upper);
   if (/^6/.test(upper)) return cmdReceivedFrom(upper);
   if (/^7/.test(upper)) return cmdTicketingArrangement(upper);
+  /* 3DOCS change (modify existing DOCS) — check BEFORE generic 3 handler */
+  if (/^3DOCS\//.test(upper) && sbState.documents.length) return cmdChangeDocs(upper);
   if (/^3/.test(upper)) return cmdSSR(upper);
+  if (/^4\//.test(upper)) return cmdOSI(upper);
+  if (/^5C?\//.test(upper)) return cmdRemarks(upper);
   if (/^WPNCB$|^WPNI$/.test(upper)) return cmdPriceQuote();
+  if (/^WPQD\d*$/.test(upper)) return cmdPqDelete(upper);
+  if (/^WC\d+[A-Z]{2}$/.test(upper)) return cmdChangeStatus(upper);
+  if (/^(VOID|WV[0-9A-Z]*)$/.test(upper)) return cmdVoidTicket(upper);
+  if (/^(RFND|REFUND)$/.test(upper)) return cmdRefund(upper);
+  if (/^(REISSUE|WREISSUE)$/.test(upper)) return cmdReissue();
+  if (/^QEP\d*$|^QS\d+$|^Q\/$/.test(upper)) return cmdQueuePlace(upper);
   if (/^ER?$/.test(upper)) return cmdEndTransaction(upper === "ER");
   if (/^\*-$|^\*-ALL$|^\*N$/.test(upper)) return cmdDisplayName();
   if (/^\*I$|^\*ITN$/.test(upper)) return cmdDisplayItinerary();
   if (/^\*P$|^\*9$|^\*P9$/.test(upper)) return cmdDisplayPhone();
   if (/^\*7$|^\*P7$/.test(upper)) return cmdDisplayTicketing();
   if (/^\*6$|^\*P6$/.test(upper)) return cmdDisplayReceived();
-  if (/^\*P3D$/.test(upper)) return cmdDisplayDocs();
+  if (/^\*P3D$|^\*P4D$/.test(upper)) return cmdDisplayDocs();
   if (/^\*T$/.test(upper)) return cmdDisplayTicket();
   if (/^\*3$|^\*P3?$|^\*SSR$/.test(upper)) return cmdDisplaySSR();
+  if (/^\*5$|^\*RM$/.test(upper)) return cmdDisplayRemarks();
+  if (/^\*PE$|^\*PD$|^PD$/.test(upper)) return cmdDisplayPassengerDetail();
+  if (/^\*ALL$|^OPEN$|^OPENPNR$/.test(upper)) return cmdOpenAllPNR();
+  if (/^SHAREPNR$|^SHARE$/.test(upper)) return cmdSharePNR();
   if (/^\*A$|^\*R$|^\*$/.test(upper)) return cmdRedisplay();
   if (/^\*[A-Z0-9]{5,6}$/.test(upper)) return cmdRetrieve(upper);
   if (/^WTP?$/.test(upper)) return cmdIssueTicket();
+  if (/^XE\d+$|^XK\d+$/.test(upper)) return cmdSegmentCancel(upper);
   if (/^IR$/.test(upper)) return cmdIgnoreRedisplay();
   if (/^I$|^IG$|^XI$/.test(upper)) return cmdIgnore();
   if (/^HELP$|^\?$/.test(upper)) return cmdHelp();
 
-  sbWarn(`FORMAT INVALID - ${upper} NOT RECOGNIZED (PHASE 1 COMMAND SET) — TYPE HELP FOR COMMAND LIST`);
+  sbWarn(`FORMAT INVALID - ${upper} NOT RECOGNIZED — TYPE HELP FOR COMMAND LIST`);
 }
 
 /* ---------------------------------------------------------------------

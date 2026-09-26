@@ -156,3 +156,55 @@ Issue-এর আগে PNR saved, fare/PQ ready এবং printer designated থ
 2. SSR/DOCS দেওয়ার আগে passenger name insert করুন।
 3. `IR` saved PNR redisplay করে; `XI` unsaved work clear করে।
 4. Fare, printer ও e-ticket output শুধুই training simulation।
+
+---
+
+## Segment cancel o status change
+
+| Command | Usage | Example |
+|---|---|---|
+| `XE<N>` | Segment N delete | `XE1`, `XE2` |
+| `XK<N>` | Segment N cancel | `XK1` |
+| `WC<N><STATUS>` | Change segment N status | `WC1HK`, `WC2UC` |
+
+Valid statuses: HK SS HL UC WL GK SA PN NO
+
+## OSI o Remarks
+
+| Command | Usage | Example |
+|---|---|---|
+| `4/<TEXT>` | Other Service Info (OSI) | `4/BG FREQUENT FLYER 123456` |
+| `5C/<TEXT>` | General remarks | `5C/PLEASE ISSUE BEFORE 20DEC` |
+| `*5` / `*RM` | Display remarks | `*5` |
+| `*PE` / `*PD` | Passenger detail | `*PD` |
+
+## PQ Delete
+
+| Command | Usage | Example |
+|---|---|---|
+| `WPQD` | Delete stored PQ | `WPQD` |
+
+## Queue
+
+| Command | Usage | Example |
+|---|---|---|
+| `QEP` | Place PNR on default queue | `QEP` |
+| `QS<N>` | Place on specific queue | `QS14` |
+| `Q/` | Queue count display | `Q/` |
+
+## Void, Refund o Reissue
+
+| Command | Usage | Example |
+|---|---|---|
+| `VOID` | Void issued ticket | `VOID` |
+| `WV<TICKETNO>` | Void by ticket number | `WV6181234567890` |
+| `RFND` / `REFUND` | Process refund | `RFND` |
+| `REISSUE` | Reissue with new fare | `REISSUE` |
+
+Reissue flow: WPA AIRLINE -> PQ -> ER -> REISSUE
+
+Void->Refund flow: VOID -> RFND
+
+## DOCS Modify
+
+Same 3DOCS command: if DOCS already exists for that passenger, it is replaced automatically.
