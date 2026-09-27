@@ -185,17 +185,45 @@ function cmdSSR(raw) {
     sbPrint('*');
     return;
   }
-  const paxRefMatch = body.match(/\/P?(\d+)$/i);
+  const slashPaxMatch = body.match(/\/P?(\d+)$/i);
+  const dashPaxMatch = !slashPaxMatch ? body.match(/-(\d+)$/) : null;
+  const paxRefMatch = slashPaxMatch || dashPaxMatch;
   const paxRef = Number(paxRefMatch?.[1] || 1);
   if (paxRefMatch) {
     const paxNum = parseInt(paxRefMatch[1], 10);
-    if (sbState.names.length && paxNum > sbState.names.length) {
+    if (paxNum < 1 || (sbState.names.length && paxNum > sbState.names.length)) {
       sbWarn(`INVALID PASSENGER REFERENCE - ONLY ${sbState.names.length} NAME(S) IN PNR`);
       return;
     }
   }
+  const bodyForCode = dashPaxMatch ? body.slice(0, -dashPaxMatch[0].length) : body;
+  const bodyForValidation = slashPaxMatch ? body.slice(0, -slashPaxMatch[0].length) : bodyForCode;
+  const upperBody = bodyForCode.toUpperCase();
+  const validationBody = bodyForValidation.toUpperCase();
+  const [code] = validationBody.split('/');
+  const payload = validationBody.startsWith(`${code}/`) ? validationBody.slice(code.length + 1) : '';
+  if (!/^[A-Z]{4}$/.test(code)) {
+    sbWarn('FORMAT: 3<4-LETTER SSR CODE>/<DETAIL>/P<PAX>');
+    return;
+  }
+  if (code === 'MOML' && payload) {
+    sbWarn('FORMAT: 3MOML-<PAX>  e.g. 3MOML-1');
+    return;
+  }
+  if (code === 'CTCM' && !/^\+?\d{7,15}$/.test(payload)) {
+    sbWarn('FORMAT: 3CTCM/<MOBILE>/P<PAX>');
+    return;
+  }
+  if (code === 'CTCE' && !/^[A-Z0-9._%+-]+\/\/[A-Z0-9.-]+\.[A-Z]{2,}$/i.test(payload)) {
+    sbWarn('FORMAT: 3CTCE/<EMAIL WITH // FOR @>/P<PAX>');
+    return;
+  }
+  if (code === 'WCHR' && !payload.trim()) {
+    sbWarn('FORMAT: 3WCHR/<DETAIL>/P<PAX>');
+    return;
+  }
   const carrier = sbState.privateFare?.carrier || sbState.booked[0]?.al || '1B';
-  const [code, ...detail] = body.toUpperCase().split('/');
+  const [, ...detail] = upperBody.split('/');
   // Store the same SSR shape that is shown again after ER / IR.
   sbState.ssrEntries.push({ text: `SSR ${code} ${carrier} HK1${detail.length ? '/' + detail.join('/') : ''}`, paxRef });
   sbPrint('*');
@@ -310,10 +338,18 @@ function cmdWpa(raw) {
   if (clean.startsWith("WPA")) {
     const after = clean.slice(3).trim();
     if (after.length === 2) {
+      if (!SB_AIRLINES[after]) {
+        sbWarn(`UNKNOWN AIRLINE CODE: ${after}`);
+        return;
+      }
       carrier = after;
-    } else if (after.length > 2) {
+    } else if (after.length > 0) {
       const found = sbFindAirline(after);
-      carrier = found ? found.code : after.slice(0, 2);
+      if (!found) {
+        sbWarn(`UNKNOWN AIRLINE: ${after}`);
+        return;
+      }
+      carrier = found.code;
     }
   }
 
@@ -586,7 +622,8 @@ function sbParse(raw) {
   if (/^PTR\/[A-Z0-9]+$/.test(upper)) return cmdPrinterDesignate(upper);
   if (/^W[¥☨‡§]PQ\d+[¥☨‡§]ASQ[¥☨‡§]FINVAGT[¥☨‡§]K7$/.test(upper)) return cmdIssueTicket();
   if (/^WPA(?:\s*([A-Z0-9]{2})|\s+(.+))?$/.test(upper) || /^WP$/i.test(upper)) return cmdWpa(upper);
-  if (/^\*PQ(?:\s*\d+)?$|^\*PQS$|^3PQ$|^PQ$/i.test(upper)) return cmdDisplayPq();
+  if (/^PQ$/i.test(upper)) return cmdPq();
+  if (/^\*PQ(?:\s*\d+)?$|^\*PQS$|^3PQ$/i.test(upper)) return cmdDisplayPq();
     if (/^1\d{2}[A-Z]{3}[A-Z]{6}$/.test(upper)) return cmdAvailability(upper);
   if (/^0[A-Z]\d+$/.test(upper)) return cmdSell(upper);
   if (/^-[A-Z]/.test(upper)) return cmdName(upper);

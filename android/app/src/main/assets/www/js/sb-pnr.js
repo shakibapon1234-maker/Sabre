@@ -99,6 +99,7 @@ function sbLoadLessonPNR() {
   sbState.phones = [{ raw: "DAC 01700000000-A" }];
   sbState.receivedFrom = "SHAKIB";
   sbState.ticketingArrangement = "TAW-20DEC/";
+  sbState.ended = true;
   sbEcho("*K7QZLM");
   sbPrint(sbRenderPNR());
   sbSyncSidePanel();
