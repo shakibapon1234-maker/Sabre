@@ -23,6 +23,10 @@ function sbEmptyState() {
     ssrEntries: [],
     documents: [],          // DOCS SSR entries (passport/APIS information)
     remarks: [],            // 5C/ general remark entries
+    frequentFlyers: [],     // FF entries
+    emails: [],             // PE passenger email entries
+    salesRecords: [],       // Issued tickets for sales reports
+    voidedRecords: [],      // Voided tickets for void reports
     printerId: null,        // ticket printer selected for this running session
     printerAssigned: false,
     printerDesignated: false,
@@ -255,7 +259,7 @@ function sbRenderPNR() {
 
   // Names with 1.1 indexing
   if (sbState.names.length) {
-    lines.push(sbState.names.map((n, i) => ` 1.${i + 1}${n.raw}${n.paxType && n.paxType !== 'ADT' ? ` (${n.paxType}${n.dob ? '/' + n.dob : ''})` : ''}`).join('  '));
+    lines.push(sbState.names.map((n, i) => ` 1.${i + 1}${n.raw}`).join('  '));
   } else {
     lines.push(' 1.1NAME PENDING');
   }

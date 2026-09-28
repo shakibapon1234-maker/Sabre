@@ -166,11 +166,49 @@ const SB_AIRLINES = {
   EK: { name: "EMIRATES", region: "MENA" },
   QR: { name: "QATAR AIRWAYS", region: "MENA" },
   EY: { name: "ETIHAD AIRWAYS", region: "MENA" },
-  SV: { name: "SAUDIA", region: "MENA" },
+  SV: { name: "SAUDI ARABIAN AIRLINES", region: "MENA" },
   TK: { name: "TURKISH AIRLINES", region: "MENA" },
   BA: { name: "BRITISH AIRWAYS", region: "EUROPE" },
   LH: { name: "LUFTHANSA", region: "EUROPE" },
-  AF: { name: "AIR FRANCE", region: "EUROPE" }
+  AF: { name: "AIR FRANCE", region: "EUROPE" },
+  CZ: { name: "CHINA SOUTHERN", region: "EASIA" },
+  GF: { name: "GULF AIR", region: "MENA" },
+  IC: { name: "INDIAN AIRLINES", region: "SASIA" },
+  IT: { name: "KINGFISHER", region: "SASIA" },
+  IY: { name: "YEMEN AIRWAYS", region: "MENA" },
+  KU: { name: "KUWAIT AIRWAYS", region: "MENA" },
+  MU: { name: "CHINA EASTERN", region: "EASIA" },
+  PK: { name: "PAKISTAN INTL", region: "SASIA" },
+  WY: { name: "OMAN AIR", region: "MENA" },
+  Z5: { name: "GMG AIRLINES", region: "BD" },
+  "9W": { name: "JET AIRWAYS", region: "SASIA" }
+};
+
+const SB_AIRCRAFT_CODES = {
+  D10: "MCDONNELL DOUGLAS",
+  "77W": "BOEING 777-300ER",
+  "788": "BOEING 787-8 DREAMLINER",
+  "789": "BOEING 787-9",
+  "738": "BOEING 737-800",
+  "739": "BOEING 737-900",
+  "320": "AIRBUS A320",
+  "321": "AIRBUS A321",
+  "359": "AIRBUS A350-900",
+  "35K": "AIRBUS A350-1000",
+  "388": "AIRBUS A380-800"
+};
+
+const SB_US_STATES = {
+  AL: "ALABAMA", AK: "ALASKA", AZ: "ARIZONA", AR: "ARKANSAS", CA: "CALIFORNIA",
+  CO: "COLORADO", CT: "CONNECTICUT", DE: "DELAWARE", FL: "FLORIDA", GA: "GEORGIA",
+  HI: "HAWAII", ID: "IDAHO", IL: "ILLINOIS", IN: "INDIANA", IA: "IOWA",
+  KS: "KANSAS", KY: "KENTUCKY", LA: "LOUISIANA", ME: "MAINE", MD: "MARYLAND",
+  MA: "MASSACHUSETTS", MI: "MICHIGAN", MN: "MINNESOTA", MS: "MISSISSIPPI", MO: "MISSOURI",
+  MT: "MONTANA", NE: "NEBRASKA", NV: "NEVADA", NH: "NEW HAMPSHIRE", NJ: "NEW JERSEY",
+  NM: "NEW MEXICO", NY: "NEW YORK", NC: "NORTH CAROLINA", ND: "NORTH DAKOTA", OH: "OHIO",
+  OK: "OKLAHOMA", OR: "OREGON", PA: "PENNSYLVANIA", RI: "RHODE ISLAND", SC: "SOUTH CAROLINA",
+  SD: "SOUTH DAKOTA", TN: "TENNESSEE", TX: "TEXAS", UT: "UTAH", VT: "VERMONT",
+  VA: "VIRGINIA", WA: "WASHINGTON", WV: "WEST VIRGINIA", WI: "WISCONSIN", WY: "WYOMING"
 };
 
 // Which hub each destination region connects through when there is no
