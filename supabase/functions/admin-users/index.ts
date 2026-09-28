@@ -61,7 +61,7 @@ Deno.serve(async (req) => {
       if (!/^[A-Z0-9_.-]{2,40}$/.test(officeId)) return fail('Office ID is invalid.')
       if (!/^\S+@\S+\.\S+$/.test(email)) return fail('A valid email address is required.')
       if (password.length < 10) return fail('Password must contain at least 10 characters.')
-      if (!Number.isInteger(deviceLimit) || deviceLimit < 1 || deviceLimit > 5) return fail('Device limit must be between 1 and 5.')
+      if (!Number.isInteger(deviceLimit) || deviceLimit < 1 || deviceLimit > 10) return fail('Device limit must be between 1 and 10.')
 
       const { data: created, error: createError } = await service.auth.admin.createUser({
         email, password, email_confirm: true,
@@ -85,7 +85,7 @@ Deno.serve(async (req) => {
       const userId = text(body.user_id, 36)
       const deviceLimit = Number(body.device_limit)
       const isActive = body.is_active === true
-      if (!userId || !Number.isInteger(deviceLimit) || deviceLimit < 1 || deviceLimit > 5) {
+      if (!userId || !Number.isInteger(deviceLimit) || deviceLimit < 1 || deviceLimit > 10) {
         return fail('Invalid user or device limit.')
       }
       if (userId === auth.user.id && !isActive) return fail('You cannot disable your own supervisor account.')

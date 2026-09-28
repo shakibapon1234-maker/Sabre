@@ -6,7 +6,7 @@ create table if not exists public.profiles (
   office_id text not null check (office_id = upper(office_id)),
   email text not null unique,
   role text not null default 'student' check (role in ('student','supervisor')),
-  device_limit smallint not null default 1 check (device_limit between 1 and 5),
+  device_limit smallint not null default 1 check (device_limit between 1 and 10),
   is_active boolean not null default true,
   created_at timestamptz not null default now(), updated_at timestamptz not null default now()
 );
