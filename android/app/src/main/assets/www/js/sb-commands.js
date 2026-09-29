@@ -425,6 +425,49 @@ function cmdChangeParty(raw) {
    • Child:  -KHAN/SONIA MISS*C10   (age after *C)
    • Infant: -I/KHAN/ALI MSTR*I17  (starts with -I/, age after *I)
 --------------------------------------------------------------------- */
+function sbCalculateAgeFromDob(dobStr) {
+  if (!dobStr) return null;
+  const s = String(dobStr).trim().toUpperCase();
+  const months = { JAN: 0, FEB: 1, MAR: 2, APR: 3, MAY: 4, JUN: 5, JUL: 6, AUG: 7, SEP: 8, OCT: 9, NOV: 10, DEC: 11 };
+
+  let birthDate = null;
+  const now = new Date();
+
+  const isoMatch = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (isoMatch) {
+    birthDate = new Date(parseInt(isoMatch[1], 10), parseInt(isoMatch[2], 10) - 1, parseInt(isoMatch[3], 10));
+  } else {
+    const ddmmyy = s.match(/^(\d{1,2})([A-Z]{3})(\d{2,4})$/);
+    if (ddmmyy) {
+      const d = parseInt(ddmmyy[1], 10);
+      const mon = months[ddmmyy[2]];
+      if (mon === undefined) return null;
+      let yr = parseInt(ddmmyy[3], 10);
+      if (yr < 100) {
+        const cur2 = now.getFullYear() % 100;
+        yr = (yr <= cur2 + 1) ? (2000 + yr) : (1900 + yr);
+      }
+      birthDate = new Date(yr, mon, d);
+    }
+  }
+
+  if (!birthDate || isNaN(birthDate.getTime())) return null;
+
+  let years = now.getFullYear() - birthDate.getFullYear();
+  let mDiff = now.getMonth() - birthDate.getMonth();
+  if (mDiff < 0 || (mDiff === 0 && now.getDate() < birthDate.getDate())) {
+    years--;
+  }
+
+  let totalMonths = (now.getFullYear() - birthDate.getFullYear()) * 12 + (now.getMonth() - birthDate.getMonth());
+  if (now.getDate() < birthDate.getDate()) {
+    totalMonths--;
+  }
+
+  return { years, totalMonths, birthDate };
+}
+if (typeof window !== 'undefined') window.sbCalculateAgeFromDob = sbCalculateAgeFromDob;
+
 function cmdName(raw) {
   let body = raw.trim();
   if (body.startsWith('-')) body = body.slice(1).trim();
@@ -448,10 +491,15 @@ function cmdName(raw) {
     if (infantAgeMatch) {
       isInfant = true;
       age = infantAgeMatch[1];
+      const mVal = parseInt(age, 10);
+      if (mVal < 1 || mVal >= 24) {
+        sbPrint('INFANT AGE DATA REQUIRED USE *I1/I01-*I23.NOT ENT BGNG WITH');
+        return;
+      }
       text = text.replace(/\*I\d+/, '').trim();
-    } else if (/\*I/.test(text)) {
+    } else if (/\*I\b/.test(text)) {
       isInfant = true;
-      text = text.replace(/\*I/, '').trim();
+      text = text.replace(/\*I\b/, '').trim();
     }
 
     // Child: contains *C<age>
@@ -459,10 +507,15 @@ function cmdName(raw) {
     if (childAgeMatch) {
       isChild = true;
       age = childAgeMatch[1];
+      const cVal = parseInt(age, 10);
+      if (cVal < 2 || cVal >= 12) {
+        sbPrint('VERIFY AGE - CHILD MUST BE 02-11 YEARS');
+        return;
+      }
       text = text.replace(/\*C\d+/, '').trim();
-    } else if (/\*C|CHD|CNN/.test(text)) {
+    } else if (/\*C\b|\bCHD\b|\bCNN\b/.test(text)) {
       isChild = true;
-      text = text.replace(/\*C|CHD|CNN/, '').trim();
+      text = text.replace(/\*C\b|\bCHD\b|\bCNN\b/, '').trim();
     }
 
     text = text.replace(/[\s/]+$/, '');
@@ -523,6 +576,25 @@ function cmdPhone(raw) {
 function cmdReceivedFrom(raw) {
   const body = raw.replace(/^6\s*/, '').trim();
   if (!body) { sbWarn('FORMAT: 6<AGENT/PASSENGER NAME>  e.g. 6P'); return; }
+
+  // Verify child/infant age validity
+  for (const p of (sbState.names || [])) {
+    if (p.paxType === 'CHD' && p.age) {
+      const c = parseInt(p.age, 10);
+      if (c < 2 || c >= 12) {
+        sbPrint('VERIFY AGE - CHILD MUST BE 02-11 YEARS');
+        return;
+      }
+    }
+    if (p.paxType === 'INF' && p.age) {
+      const m = parseInt(p.age, 10);
+      if (m < 1 || m >= 24) {
+        sbPrint('INFANT AGE DATA REQUIRED USE *I1/I01-*I23.NOT ENT BGNG WITH');
+        return;
+      }
+    }
+  }
+
   sbState.receivedFrom = body.toUpperCase();
   sbPrint('*');
 }
@@ -589,6 +661,28 @@ function cmdSSR(raw) {
   const paxMatch = body.match(/-(?:1\.)?(\d+(?:\.\d+)?)$/) || body.match(/\/P(\d+)$/);
   const paxRef = paxMatch ? Number(paxMatch[1].split('.')[0]) : 1;
   const carrier = sbState.privateFare?.carrier || sbState.booked[0]?.al || '1B';
+
+  // Age verification on 3CHLD and 3INFT manual SSR entry
+  if (/^CHLD\//i.test(body)) {
+    const chldDobMatch = body.match(/^CHLD\/(\d{1,2}[A-Z]{3}\d{2})/i);
+    if (chldDobMatch) {
+      const aInfo = sbCalculateAgeFromDob(chldDobMatch[1]);
+      if (aInfo && (aInfo.years < 2 || aInfo.years >= 12)) {
+        sbPrint('VERIFY AGE - CHILD MUST BE 02-11 YEARS');
+        return;
+      }
+    }
+  }
+  if (/^INFT/i.test(body)) {
+    const inftDobMatch = body.match(/(\d{1,2}[A-Z]{3}\d{2})/i);
+    if (inftDobMatch) {
+      const aInfo = sbCalculateAgeFromDob(inftDobMatch[1]);
+      if (aInfo && (aInfo.totalMonths >= 24 || aInfo.years >= 2)) {
+        sbPrint('INFANT AGE DATA REQUIRED USE *I1/I01-*I23.NOT ENT BGNG WITH');
+        return;
+      }
+    }
+  }
 
   sbState.ssrEntries.push({ text: `SSR ${body}`, paxRef });
   if (/^CHLD\/|^INFT/i.test(body)) {
@@ -1418,6 +1512,39 @@ function cmdEndTransaction(redisplay) {
   if (!sbState.ticketingArrangement) { sbWarn('TICKETING ARRANGEMENT REQUIRED — ENTER 7TAW/ OR 7T-'); return; }
   if (!sbState.receivedFrom) { sbWarn('RECEIVED FROM REQUIRED — ENTER 6<NAME>'); return; }
   if (!sbState.booked.length) { sbWarn('ITINERARY REQUIRED — SELL A SEGMENT FIRST'); return; }
+
+  // Verify child and infant age limits
+  for (const p of (sbState.names || [])) {
+    if (p.paxType === 'CHD' && p.age) {
+      const c = parseInt(p.age, 10);
+      if (c < 2 || c >= 12) {
+        sbPrint('VERIFY AGE - CHILD MUST BE 02-11 YEARS');
+        return;
+      }
+    }
+    if (p.paxType === 'INF' && p.age) {
+      const m = parseInt(p.age, 10);
+      if (m < 1 || m >= 24) {
+        sbPrint('INFANT AGE DATA REQUIRED USE *I1/I01-*I23.NOT ENT BGNG WITH');
+        return;
+      }
+    }
+  }
+
+  // Party size validation: Number of seated names must equal reserved seats
+  const seatedPaxCount = (sbState.names || []).filter(n => n.paxType !== 'INF').length;
+  let reservedSeats = 0;
+  for (const seg of (sbState.booked || [])) {
+    const m = (seg.status || '').match(/^(?:SS|HK)(\d+)/);
+    if (m) {
+      reservedSeats = parseInt(m[1], 10);
+      break;
+    }
+  }
+  if (reservedSeats > 0 && seatedPaxCount !== reservedSeats) {
+    sbPrint('NUMBER OF NAMES NOT EQUAL TO RESERVATIONS');
+    return;
+  }
 
   // Child / Infant DOB SSR validation
   const hasChild = (sbState.names || []).some(n => n.paxType === 'CHD');

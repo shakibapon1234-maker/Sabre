@@ -212,24 +212,54 @@ function sbSendChdInfDob() {
 
   // Child commands: 3CHLD/<DOB>-<paxRef> e.g. 3CHLD/11SEP19-2.1
   const chdRows = document.querySelectorAll('#sbDobChildTbody tr');
-  chdRows.forEach(tr => {
+  for (const tr of chdRows) {
     const chk = tr.querySelector('.sb-dob-chk');
-    if (chk && !chk.checked) return;
+    if (chk && !chk.checked) continue;
     const nameInp = tr.querySelector('.sb-chd-pax-name');
     const dobInp = tr.querySelector('.sb-chd-dob');
-    const dob = sbFormatDob(dobInp?.value) || '11SEP19';
+    const dobVal = dobInp?.value?.trim();
+    if (!dobVal) {
+      alert('PLEASE ENTER DATE OF BIRTH (DDMMMYY)');
+      if (dobInp) dobInp.focus();
+      return;
+    }
+    const dob = sbFormatDob(dobVal);
+    if (typeof sbCalculateAgeFromDob === 'function') {
+      const aInfo = sbCalculateAgeFromDob(dob);
+      if (aInfo && (aInfo.years < 2 || aInfo.years >= 12)) {
+        alert('VERIFY AGE - CHILD MUST BE 02-11 YEARS');
+        sbPrint('VERIFY AGE - CHILD MUST BE 02-11 YEARS');
+        if (dobInp) dobInp.focus();
+        return;
+      }
+    }
     const paxRef = nameInp?.value?.trim() || '2.1';
     commandsToRun.push(`3CHLD/${dob}-${paxRef}`);
-  });
+  }
 
   // Infant commands: 3INFT1/<NAME>/<DOB>-<adultRef> e.g. 3INFT1/KHDAN/ALDFI MSTR/02SEP25-1.1
   const infRows = document.querySelectorAll('#sbDobInfantTbody tr');
-  infRows.forEach(tr => {
+  for (const tr of infRows) {
     const chk = tr.querySelector('.sb-dob-chk');
-    if (chk && !chk.checked) return;
+    if (chk && !chk.checked) continue;
     const nameInp = tr.querySelector('.sb-inf-pax-name');
     const dobInp = tr.querySelector('.sb-inf-dob');
-    const dob = sbFormatDob(dobInp?.value) || '02SEP25';
+    const dobVal = dobInp?.value?.trim();
+    if (!dobVal) {
+      alert('PLEASE ENTER DATE OF BIRTH (DDMMMYY)');
+      if (dobInp) dobInp.focus();
+      return;
+    }
+    const dob = sbFormatDob(dobVal);
+    if (typeof sbCalculateAgeFromDob === 'function') {
+      const aInfo = sbCalculateAgeFromDob(dob);
+      if (aInfo && (aInfo.totalMonths >= 24 || aInfo.years >= 2)) {
+        alert('VERIFY AGE - INFANT MUST BE UNDER 2 YEARS');
+        sbPrint('INFANT AGE DATA REQUIRED USE *I1/I01-*I23.NOT ENT BGNG WITH');
+        if (dobInp) dobInp.focus();
+        return;
+      }
+    }
     const name = nameInp?.value?.trim() || 'INFANT';
     const select = tr.querySelector('.sb-dob-pax-select');
     const adultRef = (select && select.value) ? select.value : '1.1';
@@ -244,7 +274,7 @@ function sbSendChdInfDob() {
     }
 
     commandsToRun.push(`3INFT${segPrefix}/${name}/${dob}-${adultRef}`);
-  });
+  }
 
   // Close prompt
   sbCloseChdInfPrompt();
