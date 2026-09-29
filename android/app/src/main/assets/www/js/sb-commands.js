@@ -1849,10 +1849,6 @@ function sendCmd() {
   const val = input.value.trim().replace(/«$/, '');
   if (!val) return;
   if (typeof sbRememberCommand === 'function') sbRememberCommand(val.toUpperCase());
-  if (val.toUpperCase() === 'IR') {
-    const term = document.getElementById('termArea');
-    if (term) term.innerHTML = '';
-  }
   sbEcho(val);
 
   // Check if command uses Cross of Lorraine (¥/☨/‡/§) as an internal qualifier:
