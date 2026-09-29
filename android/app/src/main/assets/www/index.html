@@ -496,83 +496,84 @@
     color: #cfd6e0;
     font-family: var(--font-mono);
     padding: 0;
-    margin: 0;
-    line-height: 1.55;
-    font-size: 13.5px;
-    white-space: pre;
+    margin: 4px 0 10px;
+    line-height: 1.35;
+    font-size: 13px;
   }
   .jr-line {
     display: flex;
     align-items: center;
-    flex-wrap: nowrap;
-    gap: 0;
-    margin: 0;
+    height: 24px;
+    margin: 1px 0;
     white-space: nowrap;
-    font-size: 13.5px;
-    line-height: 1.6;
     font-family: var(--font-mono);
+    font-size: 13px;
+    color: #cfd6e0;
   }
-  .jr-hdr  { color: #eef2f6; font-weight: 700; }
-  .jr-dash { color: #4a5a73; user-select: none; letter-spacing: 0; }
-  .jr-col-hdr { color: #8b99ad; font-weight: 700; margin-top: 2px; }
+  .jr-hdr  { color: #eef2f6; font-weight: 700; font-size: 13.5px; }
+  .jr-dash { color: #4a5a73; user-select: none; font-size: 12px; letter-spacing: -0.5px; }
+  .jr-col-hdr { color: #8b99ad; font-weight: 700; font-size: 12.5px; }
 
-  /* Label widths to align with Sabre columns */
-  .jr-lbl-w4  { display: inline-block; min-width: 4ch;  }
-  .jr-lbl-w6  { display: inline-block; min-width: 6ch;  }
-  .jr-lbl-w9  { display: inline-block; min-width: 11ch; }
-  .jr-lbl-w10 { display: inline-block; min-width: 13ch; }
-  .jr-lbl-sm  { display: inline-block; margin: 0 4px 0 10px; }
-
-  .jr-mid  { display: inline-block; margin: 0 6px; }
-  .jr-mid2 { display: inline-block; margin-left: auto; padding-left: 24px; }
-  .jr-spacer { flex: 1; }
+  /* Label widths */
+  .jr-lbl-w6  { display: inline-block; width: 68px; }
+  .jr-lbl-w10 { display: inline-block; width: 116px; }
+  .jr-lbl-w4  { display: inline-block; width: 54px; }
+  .jr-lbl-w9  { display: inline-block; width: 104px; }
 
   /* Column headers */
-  .jr-col-h-date  { display: inline-block; width: 60px;  text-align: center; margin-left: 4px; }
-  .jr-col-h-time  { display: inline-block; width: 84px;  text-align: center; }
-  .jr-col-h-cxr   { display: inline-block; width: 60px;  text-align: center; }
-  .jr-col-h-cabin { display: inline-block; width: 30px;  text-align: center; }
+  .jr-col-h-date  { display: inline-block; width: 62px; text-align: center; margin-left: 12px; }
+  .jr-col-h-time  { display: inline-block; width: 92px; text-align: center; margin-left: 6px; }
+  .jr-col-h-cxr   { display: inline-block; width: 60px; text-align: center; margin-left: 6px; }
+  .jr-col-h-cabin { display: inline-block; width: 26px; text-align: center; margin-left: 6px; }
 
   /* Leg rows */
   .jr-legs { display: flex; flex-direction: column; gap: 0; }
-  .jr-leg-row { display: flex; align-items: center; gap: 4px; line-height: 1.6; }
-  .jr-leg-idx  { display: inline-block; width: 1ch; color: #cfd6e0; }
-  .jr-leg-conn { display: inline-block; margin-left: 4px; }
-  .jr-leg-star { display: inline-block; width: 1ch; color: #e8b95f; }
+  .jr-leg-row { display: flex; align-items: center; }
+  .jr-leg-idx  { display: inline-block; width: 18px; text-align: left; color: #cfd6e0; font-weight: 600; }
+  .jr-leg-star { display: inline-block; width: 10px; text-align: center; color: #ffffff; font-weight: bold; }
 
-  /* All inputs: exact Sabre white-box style */
+  /* All inputs: exact rounded white-box style from live Sabre */
   .jr-inp {
-    background: #f8f8f8;
-    color: #111827;
-    border: 1px solid #c8c8c8;
-    border-radius: 2px;
+    background: #ffffff;
+    color: #000000;
+    border: 1px solid #ffffff;
+    border-radius: 4px;
     font-family: var(--font-mono);
-    font-size: 13px;
+    font-size: 12.5px;
     font-weight: 700;
     text-align: center;
     text-transform: uppercase;
-    height: 21px;
+    height: 22px;
     box-sizing: border-box;
-    padding: 0 2px;
+    padding: 0 3px;
     outline: none;
-    margin: 1px 2px;
+    margin: 0 3px;
     vertical-align: middle;
   }
   .jr-inp:focus {
-    border-color: #0d9488;
-    background: #f0fdfa;
-    box-shadow: 0 0 0 1px #0d9488;
+    border-color: #0088cc;
+    box-shadow: 0 0 0 1px #0088cc;
+    background: #f0fdf4;
   }
 
   /* Input sizes */
-  .jr-inp-sm    { width: 24px; }
-  .jr-inp-code  { width: 40px; }
-  .jr-inp-date  { width: 58px; }
-  .jr-inp-time  { width: 82px; }
-  .jr-inp-cxr   { width: 50px; }
-  .jr-inp-psgr  { width: 48px; }
-  .jr-inp-corp  { width: 72px; }
-  .jr-inp-tprid { width: 130px; }
+  .jr-inp-sm    { width: 26px; }
+  .jr-inp-code  { width: 44px; }
+  .jr-inp-date  { width: 62px; }
+  .jr-inp-time  { width: 92px; }
+  .jr-inp-cxr   { width: 60px; }
+  .jr-inp-psgr  { width: 54px; }
+  .jr-inp-corp  { width: 84px; }
+  .jr-inp-tprid { width: 170px; text-align: left; padding: 0 6px; }
+
+  /* Results area */
+  .jr-results-area {
+    margin-top: 12px;
+    font-family: var(--font-mono);
+    font-size: 13.5px;
+    line-height: 1.5;
+    color: #cfd6e0;
+  }
 
   /* ===== CHD / INF DOB Prompt Modal (小孩嬰兒生日) ===== */
   /* ===== CHD / INF DOB Prompt Modal (小孩嬰兒生日) ===== */
