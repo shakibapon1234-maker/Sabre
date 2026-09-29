@@ -291,7 +291,7 @@
   .term-area .line-display{color:var(--text-light);font-weight:700;border-bottom:1px dashed rgba(255,255,255,0.22);padding:2px 0;}
   /* Pricing replies are one continuous host response, not separate result rows. */
   .term-area .fare-output{color:#cfd6e0;border:0;padding:0;line-height:1.48;}
-  .term-area .sb-booking-status{color:#fff;font-family:var(--font-ui);font-size:22px;line-height:1.25;font-weight:800;letter-spacing:.2px;margin:14px 0 8px;}
+  .term-area .sb-booking-status{color:#fff;font-family:var(--font-mono);font-size:20px;line-height:1.4;font-weight:800;letter-spacing:.5px;margin:10px 0 6px;padding:8px 0 6px;border-top:2px solid #35c6bb;border-bottom:2px solid #35c6bb;display:block;}
   .sb-avail-board{color:#e8edf5;font-family:var(--font-mono);margin-top:8px;min-width:900px;}
   .sb-avail-header{padding:8px 10px 12px;border-bottom:1px solid #3a4656;color:#f1f3f6;font-size:15px;}
   .sb-avail-row{display:grid;grid-template-columns:42px 54px 70px minmax(330px,1fr) 130px 170px 52px 38px;align-items:start;gap:8px;padding:14px 12px;border-bottom:1px dashed #3a4656;font-size:15px;line-height:1.55;}
@@ -528,7 +528,226 @@
   .col-cabin { width: 26px; }
   .jr-legs { display: flex; flex-direction: column; gap: 2px; margin-bottom: 2px; }
   .jr-leg-row { display: flex; align-items: center; gap: 6px; }
-  .leg-idx { width: 12px; color: #8b99ad; font-weight: 700; font-size: 12px; }
+  /* ===== CHD / INF DOB Prompt Modal (小孩嬰兒生日) ===== */
+  /* ===== CHD / INF DOB Prompt Modal (小孩嬰兒生日) ===== */
+  #sbChdInfModal {
+    position: fixed;
+    top: 70px;
+    right: 30px;
+    width: 630px;
+    max-width: 95vw;
+    background: #f0f3f6;
+    border: 1px solid #7ea7d8;
+    box-shadow: 0 4px 18px rgba(0,0,0,0.45);
+    z-index: 2500;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    color: #222;
+    border-radius: 2px;
+  }
+  .sb-dob-titlebar {
+    background: linear-gradient(to bottom, #ffffff, #d8e3ef);
+    border-bottom: 1px solid #a3bde0;
+    padding: 3px 8px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    cursor: move;
+    user-select: none;
+  }
+  .sb-dob-title {
+    font-size: 12.5px;
+    font-weight: 600;
+    color: #102a45;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .sb-dob-win-btns {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+  }
+  .sb-dob-win-btns button {
+    background: #e6edf5;
+    border: 1px solid #9cb8d9;
+    width: 20px;
+    height: 18px;
+    font-size: 11px;
+    line-height: 16px;
+    text-align: center;
+    padding: 0;
+    cursor: pointer;
+    border-radius: 2px;
+  }
+  .sb-dob-win-btns button:hover {
+    background: #cce0f5;
+  }
+  .sb-dob-body {
+    padding: 8px 12px 10px;
+    font-size: 12px;
+  }
+  .sb-dob-auto-lbl {
+    color: #d9230f;
+    font-weight: 700;
+    font-size: 12.5px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    margin-bottom: 6px;
+  }
+  .sb-dob-sec-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 8px 0 3px;
+  }
+  .sb-dob-sec-title {
+    color: #d9230f;
+    font-weight: 700;
+    font-size: 12px;
+  }
+  .sb-dob-ex-btn {
+    background: #e8ecef;
+    border: 1px solid #8d9ba8;
+    border-radius: 2px;
+    padding: 1px 7px;
+    font-size: 11px;
+    cursor: pointer;
+    color: #222;
+  }
+  .sb-dob-ex-btn:hover {
+    background: #d4dde6;
+  }
+  .sb-dob-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: #ffffff;
+    border: 1px solid #7ea7d8;
+    margin-bottom: 4px;
+    font-size: 11.5px;
+  }
+  .sb-dob-table th {
+    background: #bddbf7;
+    border: 1px solid #95bde6;
+    color: #0d335f;
+    font-weight: 600;
+    padding: 3px 5px;
+    text-align: center;
+    white-space: nowrap;
+  }
+  .sb-dob-table td {
+    border: 1px solid #95bde6;
+    padding: 3px 5px;
+    text-align: center;
+    color: #111;
+    background: #ffffff;
+  }
+  .sb-dob-inp-box {
+    background: #ffffff;
+    border: 1px solid #7f9db9;
+    border-radius: 1px;
+    height: 22px;
+    box-sizing: border-box;
+    font-family: inherit;
+    font-size: 12px;
+    padding: 2px 4px;
+    outline: none;
+  }
+  .sb-dob-inp-box:focus {
+    border-color: #2b78d4;
+    box-shadow: 0 0 0 1px #2b78d4;
+  }
+  .sb-dob-seg-col {
+    white-space: nowrap;
+    padding: 2px 6px !important;
+    text-align: left !important;
+  }
+  .sb-dob-seg-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+    font-weight: 700;
+    cursor: pointer;
+    font-size: 11px;
+  }
+  .sb-dob-seg-sub {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    cursor: pointer;
+    margin-top: 2px;
+    font-size: 11px;
+  }
+  .sb-dob-seg-note {
+    color: #d9230f;
+    font-size: 11.5px;
+    font-weight: 700;
+    margin: 6px 0 8px;
+  }
+  .sb-dob-send-btn {
+    background: #e4e7ea;
+    border: 1px solid #707070;
+    border-radius: 2px;
+    padding: 3px 18px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    color: #111;
+  }
+  .sb-dob-send-btn:hover {
+    background: #cce0f5;
+    border-color: #2b78d4;
+  }
+
+  /* Sabre SSR Error Banner (Screenshot 3 match) */
+  .sb-ssr-error-box {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin: 14px 0 16px 20px;
+  }
+  .sb-ssr-error-icon {
+    width: 42px;
+    height: 42px;
+    min-width: 42px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    user-select: none;
+  }
+  .sb-ssr-error-text {
+    color: #cfd6e0;
+    font-family: var(--font-mono);
+    font-size: 13.5px;
+    line-height: 1.55;
+    font-weight: 500;
+    letter-spacing: 0.3px;
+  }
+
+  /* Sabre Direct Connect Info Banner (Screenshot 1 match) */
+  .sb-dc-msg-box {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 14px 0 10px 16px;
+  }
+  .sb-dc-msg-icon {
+    width: 32px;
+    height: 32px;
+    min-width: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    user-select: none;
+  }
+  .sb-dc-msg-text {
+    color: #cfd6e0;
+    font-family: var(--font-mono);
+    font-size: 13.5px;
+    line-height: 1.45;
+  }
 
 </style>
 </head>
@@ -640,6 +859,70 @@
     স্বাধীন এডুকেশনাল ট্রেনিং টুল — Sabre Corporation-এর সাথে কোনো অ্যাফিলিয়েশন নেই। কোনো লাইভ GDS-এর সাথে কানেক্টেড না। · Wings Fly Aviation Academy
   </div>
 
+  <!-- Child & Infant DOB prompt modal (小孩嬰兒生日) -->
+  <div id="sbChdInfModal" style="display:none;">
+    <div class="sb-dob-titlebar">
+      <div class="sb-dob-title">
+        <span style="font-size:12px;">📄</span> 小孩嬰兒生日
+      </div>
+      <div class="sb-dob-win-btns">
+        <button type="button" onclick="sbToggleMinChdInfPrompt()" title="Minimize">-</button>
+        <button type="button" onclick="sbCloseChdInfPrompt()" title="Close">✕</button>
+      </div>
+    </div>
+    <div class="sb-dob-body">
+      <div>
+        <label class="sb-dob-auto-lbl">
+          <input type="checkbox" id="sbDobAutoPromptChk" checked onchange="sbToggleAutoPromptDob(this.checked)">
+          Enable auto prompt for CHD/INF DOB
+        </label>
+      </div>
+
+      <!-- Child section -->
+      <div id="sbDobChildSection" style="display:none;">
+        <div class="sb-dob-sec-head">
+          <span class="sb-dob-sec-title">Please input correct format for Child.</span>
+          <button type="button" class="sb-dob-ex-btn" onclick="sbFillDobExample('CHD')">Example</button>
+        </div>
+        <table class="sb-dob-table">
+          <thead>
+            <tr>
+              <th style="width:28px;"><input type="checkbox" checked disabled></th>
+              <th style="width:75px;">Pax Name</th>
+              <th style="width:65px;">Pax Type</th>
+              <th>DOB(ddMMMyy)</th>
+            </tr>
+          </thead>
+          <tbody id="sbDobChildTbody"></tbody>
+        </table>
+      </div>
+
+      <!-- Infant section -->
+      <div id="sbDobInfantSection" style="display:none;">
+        <div class="sb-dob-sec-head">
+          <span class="sb-dob-sec-title">Please input : 3INFT</span>
+          <button type="button" class="sb-dob-ex-btn" onclick="sbFillDobExample('INF')">Example</button>
+        </div>
+        <table class="sb-dob-table">
+          <thead>
+            <tr>
+              <th style="width:28px;"><input type="checkbox" checked disabled></th>
+              <th style="width:175px;">Pax Name : Surname/GivenNameTitle</th>
+              <th style="width:65px;">Pax Type</th>
+              <th style="width:75px;">Pax Name/Select</th>
+              <th style="width:145px;">DOB(ddMMMyy)</th>
+              <th style="width:90px;">Seg NO</th>
+            </tr>
+          </thead>
+          <tbody id="sbDobInfantTbody"></tbody>
+        </table>
+      </div>
+
+      <div class="sb-dob-seg-note">If new seg(s) added , please select segment(s)</div>
+      <button type="button" class="sb-dob-send-btn" onclick="sbSendChdInfDob()">Send</button>
+    </div>
+  </div>
+
   <!-- Command history modal -->
   <div class="sb-help-overlay" id="sbHistoryModal" onclick="if(event.target===this) sbCloseHistory()">
     <div class="sb-history-modal">
@@ -668,6 +951,7 @@
 <script src="js/sb-availability.js"></script>
 <script src="js/sb-pnr.js"></script>
 <script src="js/sb-commands.js"></script>
+<script src="js/sb-dob-prompt.js"></script>
 <script src="js/sb-app.js"></script>
 <script src="js/sb-pfkeys.js"></script>
 <script src="js/sb-fareshop.js"></script>

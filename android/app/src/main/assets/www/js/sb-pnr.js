@@ -16,13 +16,17 @@ function sbEmptyState() {
     dateStamp: null,
     names: [],             // [{ raw, surname, first, title }]
     _availCache: null,      // last availability options shown (for sell)
-    booked: [],             // sold segments in the PNR (flat list — a
-                             // connection contributes 2 consecutive entries)
+    booked: [],             // sold segments in the PNR (flat list)
     phones: [],
     receivedFrom: null,
     ticketingArrangement: null,
     ssrEntries: [],
     documents: [],          // DOCS SSR entries (passport/APIS information)
+    remarks: [],            // 5C/ general remark entries
+    frequentFlyers: [],     // FF entries
+    emails: [],             // PE passenger email entries
+    salesRecords: [],       // Issued tickets for sales reports
+    voidedRecords: [],      // Voided tickets for void reports
     printerId: null,        // ticket printer selected for this running session
     printerAssigned: false,
     printerDesignated: false,
@@ -32,6 +36,9 @@ function sbEmptyState() {
     eticketNumber: null,
     ticketNumbers: [],
     invoiced: false,
+    voided: false,          // ticket was voided
+    voidedTicketNo: null,   // ticket number that was voided
+    refunded: false,        // refund was processed
     ended: false
   };
 }
@@ -132,6 +139,48 @@ function sbPrint(text, cls) {
   term.scrollTop = term.scrollHeight;
 }
 function sbWarn(text) { sbPrint(text, 'line-warn'); }
+function sbPrintSsrError(lines) {
+  const term = document.getElementById('termArea');
+  if (!term) return;
+  const box = document.createElement('div');
+  box.className = 'sb-ssr-error-box';
+  box.innerHTML = `
+    <div class="sb-ssr-error-icon">
+      <svg width="38" height="38" viewBox="0 0 38 38" fill="none">
+        <circle cx="19" cy="19" r="17" fill="#cc0000"/>
+        <circle cx="19" cy="19" r="11" stroke="#ffffff" stroke-width="2.8" fill="none"/>
+        <line x1="11" y1="27" x2="27" y2="11" stroke="#ffffff" stroke-width="2.8"/>
+      </svg>
+    </div>
+    <div class="sb-ssr-error-text">
+      ${lines.map(l => `<div>${l}</div>`).join('')}
+    </div>
+  `;
+  term.appendChild(box);
+  term.scrollTop = term.scrollHeight;
+}
+
+function sbPrintDcMessage() {
+  const term = document.getElementById('termArea');
+  if (!term) return;
+  const box = document.createElement('div');
+  box.className = 'sb-dc-msg-box';
+  box.innerHTML = `
+    <div class="sb-dc-msg-icon">
+      <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+        <circle cx="14" cy="14" r="13" fill="#0088cc"/>
+        <circle cx="14" cy="8.5" r="1.8" fill="#ffffff"/>
+        <rect x="12.5" y="12" width="3" height="9" rx="1" fill="#ffffff"/>
+      </svg>
+    </div>
+    <div class="sb-dc-msg-text">
+      <div style="font-weight:bold; color:#f0f4f8;">DIRECT CONNECT MESSAGES RECEIVED</div>
+      <div style="color:#8fd0f0;">¥NO ITIN MSGS¥</div>
+    </div>
+  `;
+  term.appendChild(box);
+  term.scrollTop = term.scrollHeight;
+}
 
 /* ---------------------------------------------------------------------
    INTERACTIVE AVAILABILITY — arrow or any booking-class bucket opens a
@@ -209,7 +258,7 @@ function sbRenderAvailabilityBoard(options, date) {
     board.appendChild(detail);
   });
   term.appendChild(board);
-  term.scrollTop = term.scrollHeight;
+  board.scrollIntoView({ block: 'start', behavior: 'smooth' });
 }
 
 function sbOpenSeatHold(line, bookingClass, detail) {
@@ -224,7 +273,7 @@ function sbSyncSidePanel() {
   const msg = document.getElementById('panelMsg');
   if (pnrLine) {
     pnrLine.textContent = sbState.locator
-      ? `${sbState.locator}.${sbState.officeId}`
+      ? `${sbState.locator}.${sbState.officeId || '3MUL'}`
       : `${SB_OFFICE}.${SB_OFFICE}`;
   }
   if (msg) {
@@ -233,8 +282,9 @@ function sbSyncSidePanel() {
   const tabA = document.querySelector('#wsA .code');
   if (tabA) {
     if (sbState.locator && sbState.names.length) {
-      const pName = sbState.names[0].raw.replace('/', ' ');
-      tabA.textContent = `QIG ${sbState.locator} - ${pName}`;
+      const firstPax = sbState.names[0];
+      const pName = `${firstPax.surname || ''} ${firstPax.first || ''} ${firstPax.title || ''}`.trim() || firstPax.raw.replace('/', ' ');
+      tabA.textContent = `${sbState.locator} - ${pName}`;
     } else {
       tabA.textContent = SB_OFFICE;
     }
@@ -244,24 +294,49 @@ function sbSyncSidePanel() {
 /* ---------------------------------------------------------------------
    RENDER — Sabre-style PNR display (*R format)
 --------------------------------------------------------------------- */
-function sbRenderPNR() {
+function sbRenderPNR(isEr = false) {
   if (!sbState.locator && sbState.booked.length === 0) {
     return "NO ACTIVE PNR — SELL A SEGMENT AND ADD A NAME FIRST";
   }
   const lines = [];
 
-  // Names with 1.1 indexing
-  if (sbState.names.length) {
-    lines.push(sbState.names.map((n, i) => ` 1.${i + 1}${n.raw}${n.paxType && n.paxType !== 'ADT' ? ` (${n.paxType}${n.dob ? '/' + n.dob : ''})` : ''}`).join('  '));
+  // Names with 1.1, 2.1 and infant 3.I/1... indexing matching Sabre screenshots
+  const adtAndChd = [];
+  const inf = [];
+  let paxCounter = 1;
+
+  (sbState.names || []).forEach((pax) => {
+    if (pax.paxType === 'INF') {
+      inf.push(pax);
+    } else {
+      adtAndChd.push({ pax, num: paxCounter++ });
+    }
+  });
+
+  const nameParts = adtAndChd.map(({ pax, num }) => {
+    const ageTag = (pax.paxType === 'CHD' && pax.age) ? `*C${pax.age}` : '';
+    const title = pax.title ? ` ${pax.title}` : '';
+    return `${num}.1${pax.surname}/${pax.first}${title}${ageTag}`;
+  });
+
+  if (nameParts.length) {
+    lines.push(` ${nameParts.join('  ')}`);
   } else {
     lines.push(' 1.1NAME PENDING');
   }
+
+  inf.forEach((pax) => {
+    const ageTag = pax.age ? `*I${pax.age}` : '';
+    const title = pax.title ? ` ${pax.title}` : '';
+    lines.push(` ${paxCounter++}.I/1${pax.surname}/${pax.first}${title}${ageTag}`);
+  });
 
   // Flight segments
   sbState.booked.forEach((s, i) => {
     const dayOverTag = s.dayOver ? `+${s.dayOver}` : '';
     const st = sbState.locator ? s.status.replace(/^SS/, 'HK') : s.status;
-    const directConnect = `  /DC${s.al}*${sbRandomLocator()} /E`;
+    if (!s.dcLocator) s.dcLocator = sbRandomLocator();
+    const directConnect = isEr ? `  /DC${s.al} /E` : `  /DC${s.al}*${s.dcLocator} /E`;
     lines.push(
       ` ${i + 1} ${s.al} ${s.fn}${s.cls} ${s.date} ${s.day} ${s.dep}${s.arr} ${st}  ${s.depT}  ${s.arrT}${dayOverTag}${directConnect}`
     );
@@ -270,38 +345,76 @@ function sbRenderPNR() {
   // Ticketing arrangement
   if (sbState.ticketingArrangement) {
     lines.push("TKT/TIME LIMIT");
-    lines.push(` 1.${sbState.ticketingArrangement}`);
+    lines.push(`  1.${sbState.ticketingArrangement}`);
   } else if (sbState.locator) {
     lines.push("TKT/TIME LIMIT");
-    lines.push(" 1.T-");
+    lines.push("  1.T-");
   }
 
   // Phones
   if (sbState.phones.length) {
     lines.push("PHONES");
-    sbState.phones.forEach((p, i) => lines.push(` ${i + 1}.${p.raw}`));
+    sbState.phones.forEach((p, i) => lines.push(`  ${i + 1}.${p.raw}`));
   }
 
-  // General facts & SSR (automatic advisory in Sabre)
+  // General facts & SSR (matching Sabre screenshots 1 & 2)
   if (sbState.locator) {
     lines.push("PASSENGER DETAIL FIELD EXISTS - USE PD TO DISPLAY");
     lines.push("GENERAL FACTS");
-    const mainAl = sbState.booked[0]?.al || '1B';
+    const mainAl = sbState.booked[0]?.al || 'SQ';
+    const firstLeg = sbState.booked[0];
     const d = new Date();
     const mon = ["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"][d.getMonth()];
     const dt = `${String(d.getDate()).padStart(2,'0')}${mon}`;
-    // Sabre keeps its advisory facts alongside any SSR the agent has added.
-    lines.push(" 1.SSR OTHS 1B 270799072759 - SHORT TTL DUE TO MISSING CTCE/CTCM");
-    lines.push(` 2.SSR ADTK 1B TO ${mainAl} BY ${dt} 0601 ZZZ TIME ZONE OTHERWISE WILL BE XLD`);
-    if (sbState.ssrEntries.length || sbState.documents.length) {
-      sbState.ssrEntries.forEach((s, i) => lines.push(` ${i + 4}.${typeof s === 'string' ? s : s.text}`));
-      sbState.documents.forEach((doc, i) => {
-        const paxRef = doc.paxRef || 1;
-        const pax = sbState.names[paxRef - 1]?.raw || 'PASSENGER';
-        const docText = doc.raw.replace(/^DOCS\//, '').replace(/-\d+\.\d+$/, '');
-        lines.push(` ${sbState.ssrEntries.length + i + 4}.SSR DOCS ${doc.carrier} HK1/${docText}  1.${paxRef} ${pax}`);
-      });
+
+    let gfIdx = 1;
+
+    // Check for child SSR
+    const chdEntry = (sbState.ssrEntries || []).find(s => /CHLD/i.test(typeof s === 'string' ? s : (s.text || '')));
+    if (chdEntry) {
+      const txt = typeof chdEntry === 'string' ? chdEntry : chdEntry.text;
+      const dobMatch = txt.match(/CHLD\/([A-Z0-9]+)/i);
+      const dob = dobMatch ? dobMatch[1] : '11SEP19';
+      lines.push(`  ${gfIdx++}.SSR CHLD ${mainAl} HK1/${dob}`);
     }
+
+    // Check for infant SSR
+    const infEntry = (sbState.ssrEntries || []).find(s => /INFT/i.test(typeof s === 'string' ? s : (s.text || '')));
+    if (infEntry) {
+      const txt = typeof infEntry === 'string' ? infEntry : infEntry.text;
+      const parts = txt.replace(/^SSR\s+/i, '').replace(/^3?INFT\d*\/?/i, '').split('/');
+      let infName = 'INFANT';
+      let infDob = '02SEP25';
+      if (parts.length >= 2) {
+        infName = parts[0].trim();
+        infDob = parts[1].split('-')[0].trim();
+      }
+      const dep = firstLeg ? firstLeg.dep : 'SIN';
+      const arr = firstLeg ? firstLeg.arr : 'BKK';
+      const fn = firstLeg ? String(firstLeg.fn).padStart(4, '0') : '0710';
+      const fDate = firstLeg ? firstLeg.date : `${dt}`;
+      const cls = firstLeg ? firstLeg.cls : 'B';
+      const segTag = `${dep}${arr}${fn}${cls}${fDate}`;
+      const status = isEr ? 'NN1' : 'KK1';
+      lines.push(`  ${gfIdx++}.SSR INFT ${mainAl} ${status} ${segTag}/${infName}/${infDob}`);
+    }
+
+    // If IR screen: add ADTK and OTHS advisories exactly as in Screenshot 2
+    if (!isEr) {
+      const advDate = new Date(d.getTime() + 21 * 24 * 60 * 60 * 1000);
+      const advMon = ["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"][advDate.getMonth()];
+      const advDt = `${String(advDate.getDate()).padStart(2,'0')}${advMon}`;
+      lines.push(`  ${gfIdx++}.SSR ADTK 1B TO ${mainAl} BY ${advDt} 2300 DAC TIME ZONE OTHERWISE WIL\n    L BE XLD`);
+      lines.push(`  ${gfIdx++}.SSR OTHS 1B MISSING SSR CTCM MOBILE OR SSR CTCE EMAIL OR SS\n    R CTCR NON-CONSENT FOR ${mainAl}`);
+    }
+
+    // Any other custom SSR
+    (sbState.ssrEntries || []).forEach(s => {
+      const rawText = typeof s === 'string' ? s : (s.text || '');
+      if (!/CHLD|INFT/i.test(rawText)) {
+        lines.push(`  ${gfIdx++}.${rawText}`);
+      }
+    });
   }
 
   // Fare quote
@@ -328,9 +441,23 @@ function sbRenderPNR() {
     lines.push(`RECEIVED FROM - ${sbState.receivedFrom}`);
   }
 
-  // Footer line matching 3MUL.3MUL*ATW 0059/24SEP26 PUYPQE H M
+  // General Remarks
+  if (sbState.remarks && sbState.remarks.length) {
+    lines.push('GENERAL REMARKS');
+    sbState.remarks.forEach((r, i) => lines.push(`  ${i + 1}.${r}`));
+  }
+
+  // Void / refund notices
+  if (sbState.voided) {
+    lines.push(`TICKET ${sbState.voidedTicketNo} - VOIDED`);
+  }
+  if (sbState.refunded) {
+    lines.push('REFUND PROCESSED');
+  }
+
+  // Footer line matching 3MUL.3MUL*ATE 1218/29SEP26 RODXAE H M
   if (sbState.locator) {
-    lines.push(`${sbState.officeId}.${sbState.officeId}*ATW ${sbSabreFooterStamp()} ${sbState.locator} H M`);
+    lines.push(`${sbState.officeId || '3MUL'}.${sbState.officeId || '3MUL'}*ATE ${sbSabreFooterStamp()} ${sbState.locator} H M`);
   } else {
     lines.push("*** NOT YET STORED — USE E TO END/SAVE ***");
   }

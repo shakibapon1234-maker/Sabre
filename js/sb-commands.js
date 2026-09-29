@@ -383,6 +383,7 @@ function cmdSell(raw, quantity = 1) {
   const opt = sbState._availCache[idx];
   const weekDays = ['', 'SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
 
+  sbPrint('BOOKING STATUS: SEGMENTS ADDED TO PNR', 'sb-booking-status');
   opt.legs.forEach(leg => {
     sbState.booked.push({
       al: leg.al, fn: leg.fn, cls, date: opt.date, dep: leg.dep, arr: leg.arr,
@@ -390,7 +391,7 @@ function cmdSell(raw, quantity = 1) {
       eq: leg.eq, day: leg.day, dayOver: leg.dayOver
     });
     const s = sbState.booked[sbState.booked.length - 1];
-    const dayOverTag = s.dayOver ? `+${s.dayOver}` : '';
+    const dayOverTag = s.dayOver ? ` +${s.dayOver}` : '';
     const dayName = weekDays[Number(s.day)] || '---';
     sbPrint(` ${sbState.booked.length} ${s.al.padEnd(5)} ${s.fn.padEnd(4)} ${s.cls.padEnd(2)} ${s.date} ${dayName}  ${s.dep.padEnd(4)} ${s.arr.padEnd(4)} ${s.status.padEnd(4)} ${s.depT}  ${s.arrT}${dayOverTag}`);
   });
@@ -590,6 +591,9 @@ function cmdSSR(raw) {
   const carrier = sbState.privateFare?.carrier || sbState.booked[0]?.al || '1B';
 
   sbState.ssrEntries.push({ text: `SSR ${body}`, paxRef });
+  if (/^CHLD\/|^INFT/i.test(body)) {
+    sbPrint(upper);
+  }
   sbPrint('*');
 }
 
@@ -1415,6 +1419,32 @@ function cmdEndTransaction(redisplay) {
   if (!sbState.receivedFrom) { sbWarn('RECEIVED FROM REQUIRED — ENTER 6<NAME>'); return; }
   if (!sbState.booked.length) { sbWarn('ITINERARY REQUIRED — SELL A SEGMENT FIRST'); return; }
 
+  // Child / Infant DOB SSR validation
+  const hasChild = (sbState.names || []).some(n => n.paxType === 'CHD');
+  const hasInfant = (sbState.names || []).some(n => n.paxType === 'INF');
+  const hasChildSSR = (sbState.ssrEntries || []).some(s => /CHLD/i.test(typeof s === 'string' ? s : (s.text || '')));
+  const hasInfantSSR = (sbState.ssrEntries || []).some(s => /INFT|INF\//i.test(typeof s === 'string' ? s : (s.text || '')));
+
+  const errMessages = [];
+  if (hasChild && !hasChildSSR) {
+    errMessages.push('CHILD DETAILS REQUIRED IN SSR - ENTER 3CHLD/...');
+  }
+  if (hasInfant && !hasInfantSSR) {
+    errMessages.push('INFANT DETAILS REQUIRED IN SSR - ENTER 3INFT/...');
+  }
+
+  if (errMessages.length > 0) {
+    if (typeof sbPrintSsrError === 'function') {
+      sbPrintSsrError(errMessages);
+    } else {
+      errMessages.forEach(m => sbPrint(m, 'line-warn'));
+    }
+    if (typeof sbOpenChdInfPrompt === 'function') {
+      sbOpenChdInfPrompt(true);
+    }
+    return;
+  }
+
   if (!sbState.locator) {
     sbState.locator = sbRandomLocator();
     sbState.dateStamp = sbSabreFooterStamp();
@@ -1426,12 +1456,18 @@ function cmdEndTransaction(redisplay) {
 
   sbPnrStorePut(sbState);
   sbPrint(sbState.locator);
-  if (redisplay) sbPrint(sbRenderPNR());
+  if (redisplay) {
+    sbPrint('RECORD LOCATOR REQUESTED');
+    sbPrint(sbRenderPNR(true));
+    if (typeof sbPrintDcMessage === 'function') {
+      sbPrintDcMessage();
+    }
+  }
   sbSyncSidePanel();
 }
 
 function cmdRedisplay() {
-  sbPrint(sbRenderPNR());
+  sbPrint(sbRenderPNR(false));
 }
 
 function cmdIgnore() {
@@ -1445,7 +1481,8 @@ function cmdIgnoreRedisplay() {
     const store = sbPnrStoreLoad();
     if (store[sbState.locator]) {
       sbState = JSON.parse(JSON.stringify(store[sbState.locator]));
-      sbPrint(sbRenderPNR());
+      sbPrint(sbState.locator);
+      sbPrint(sbRenderPNR(false));
       sbSyncSidePanel();
       return;
     }
