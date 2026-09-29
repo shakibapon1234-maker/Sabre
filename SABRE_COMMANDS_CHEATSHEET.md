@@ -1,210 +1,416 @@
-# Sabre Training Simulator — Student Command Sheet
-
-> এটি শিক্ষামূলক simulator-এর command guide; live Sabre GDS নয়। সব command বড় হাতের অক্ষরে লিখে Enter চাপুন।
-
-## এক নজরে সম্পূর্ণ booking-to-ticket flow
-
-```text
-120JANDACSIN
-0Y1
--RAHMAN/ANIS MR
-9DAC 01700000000-A
-WPA SQ
-PQ
-6S
-ER
-IR
-W*BD
-DSIVE8C987
-PTR/E8C987
-W¥PQ1¥ASQ¥FINVAGT¥K7
-*T
-```
-
-## Keyboard mapping
-
-| Key | কী হবে | ব্যবহার |
-|---|---|---|
-| `+` বা `=` | `*` (Display) | `*R`, `*PQ`, `*T` লিখতে |
-| Enter-এর বাঁ পাশের quote/backslash key | `¥` (Cross of Lorraine) | এক entry-তে item আলাদা করতে |
-| Enter | command পাঠায় | প্রতিটি entry চালাতে |
-
-## Search, availability ও sell
-
-| Command | ব্যবহার | উদাহরণ |
-|---|---|---|
-| `W/-<CITY/CODE>` | airport/city code খোঁজে বা decode করে | `W/-DAC`, `W/-DHAKA` |
-| `W/-COUNTRIES` | training country-code list | `W/-COUNTRIES` |
-| `1<DDMMM><FROM><TO>` | নির্দিষ্ট দিনের flight availability | `120JANDACSIN` |
-| `0<CLASS><LINE>` | availability-এর flight/class sell | `0Y1` |
-| `*I` / `*ITN` | itinerary display | `*I` |
-
-আগে availability না দেখিয়ে sell করা যাবে না। Connection sell করলে সব legs একসঙ্গে PNR-এ যোগ হয়।
-
-## Name entry — Adult, Child ও Infant
-
-| Passenger | Command format | উদাহরণ | ফল |
-|---|---|---|---|
-| Adult | `-SURNAME/FIRSTNAME TITLE` | `-RAHMAN/ANIS MR` | Adult যোগ হয় |
-| দ্বিতীয় adult | একই format আবার দিন | `-KHAN/SUMI MS` | passenger `1.2` হবে |
-| Child | `-SURNAME/FIRSTNAME CHD/DDMMMYY` | `-RAHMAN/RIFAT CHD/15JAN15` | CHD ও DOB যোগ হয় |
-| Child (বিকল্প) | `-SURNAME/FIRSTNAME CNN/DDMMMYY` | `-RAHMAN/RIFAT CNN/15JAN15` | CHD হিসেবে নেওয়া হয় |
-| Infant | `-SURNAME/FIRSTNAME*I/DDMMMYY` | `-RAHMAN/BABY*I/20JAN25` | INF ও DOB যোগ হয় |
-| Name display | `*- ` / `*N` | `*N` | সব name দেখায় |
-
-Passenger reference: প্রথম নাম `P1`/`1.1`, দ্বিতীয় `P2`/`1.2`, তৃতীয় `P3`/`1.3`।
-
-## Contact, ticketing ও received-from
-
-| Command | ব্যবহার | উদাহরণ |
-|---|---|---|
-| `9<CITY> <NUMBER>-<TYPE>` | phone/contact field | `9DAC 01700000000-A` |
-| `*P` / `*9` | phones display | `*P` |
-| `7TAW-<DDMMM>/` | ticket time limit | `7TAW-24SEP/` |
-| `*7` | time limit display | `*7` |
-| `6<NAME>` | received from | `6S` বা `6SHAKIB` |
-| `*6` | received from display | `*6` |
-
-## SSR: meal, wheelchair ও contacts
-
-| Command | ব্যবহার | উদাহরণ |
-|---|---|---|
-| `3<SSR>/P<PAX>` | passenger-specific SSR | `3VGML/P2` |
-| `3CTCM/<MOBILE>/P<PAX>` | mobile contact | `3CTCM/01757208244/P1` |
-| `3CTCE/<EMAIL>/P<PAX>` | email contact; `@`-এর বদলে `//` | `3CTCE/SHAKIBAPON//GMAIL.COM/P2` |
-| `3MOML-<PAX>` | Muslim meal | `3MOML-1` |
-| `3WCHR/<DETAIL>/P<PAX>` | wheelchair SSR | `3WCHR/ELDERLY AGED/P3` |
-| `*SSR` / `*3` | SSR display | `*SSR` |
-
-`P1/P2` ভুল হলে simulator warning দেয়।
-
-## Passport / DOCS SSR
-
-| Command | ব্যবহার | উদাহরণ |
-|---|---|---|
-| `3DOCS/...-1.<PAX>` | passport/APIS information যোগ করে | `3DOCS/P/BD/A3863636/BD/20MAY95/M/30JUN32/RAHMAN/ANIS-1.1` |
-| `*P3D` | passenger documents display | `*P3D` |
-
-দ্বিতীয় passenger-এর জন্য শেষে `-1.2`, তৃতীয় জনের জন্য `-1.3` ব্যবহার করুন।
-
-## Fare quote ও PQ
-
-| Command | ব্যবহার | উদাহরণ |
-|---|---|---|
-| `WPA <AIRLINE>` | carrier অনুযায়ী fare load | `WPA SQ`, `WPA MH` |
-| `PQ` | PQ প্রস্তুত করে | `PQ` |
-| `*PQ` / `3PQ` | full PQ/fare record | `*PQ` |
-| `WPNCB` / `WPNI` | booked airline দিয়ে fare quote | `WPNCB` |
-
-Multi-passenger training calculation: ADT 100%, CHD 75%, INF 10%। `*PQ`-তে breakdown দেখা যায়।
-
-## Save, redisplay ও retrieve
-
-| Command | ব্যবহার | উদাহরণ |
-|---|---|---|
-| `E` | PNR end/save | `E` |
-| `ER` | save ও সঙ্গে সঙ্গে redisplay | `ER` |
-| `IR` | saved PNR redisplay | `IR` |
-| `*R` | current PNR display | `*R` |
-| `*<LOCATOR>` | locator দিয়ে retrieve | `*K7QZLM` |
-| `XI` | unsaved work clear | `XI` |
-
-## Printer assignment — issue-এর আগে একবার
-
-| ধাপ | Command | Expected response |
-|---|---|---|
-| 1 | `W*BD` | `OK-0008` |
-| 2 | `DSIV<PRINTER ID>` | `OK PTR ASSIGNED` |
-| 3 | `PTR/<PRINTER ID>` | `PRINTER DESIGNATED` |
-
-```text
-W*BD
-DSIVE8C987
-PTR/E8C987
-```
-
-`DSIV` fixed, কিন্তু printer ID পরিবর্তন হতে পারে। নতুন app session হলে আবার assign করুন।
-
-## Ticket issue ও ticket display
-
-| Command | ব্যবহার | উদাহরণ |
-|---|---|---|
-| `WT` / `WTP` | training e-ticket issue | `WTP` |
-| `W¥PQ1¥ASQ¥FINVAGT¥K7` | invoice/accounting সহ issue flow | `W¥PQ1¥ASQ¥FINVAGT¥K7` |
-| `*T` | issued ticket ও time limit display | `*T` |
-
-Issue-এর আগে PNR saved, fare/PQ ready এবং printer designated থাকতে হবে। একাধিক passenger হলে `*T`-তে প্রত্যেকের ticket line আলাদা আসে।
-
-## দ্রুত display reference
-
-| কী দেখতে চান | Command |
-|---|---|
-| Current PNR | `*R` |
-| Names | `*N` / `*-` |
-| Itinerary | `*I` |
-| Phones | `*P` / `*9` |
-| Time limit | `*7` |
-| Received from | `*6` |
-| SSR | `*SSR` / `*3` |
-| Documents | `*P3D` |
-| PQ/fare record | `*PQ` |
-| Issued ticket | `*T` |
-
-## গুরুত্বপূর্ণ মনে রাখবেন
-
-1. `ER` দেওয়ার আগে অন্তত একটি name ও একটি flight segment থাকতে হবে।
-2. SSR/DOCS দেওয়ার আগে passenger name insert করুন।
-3. `IR` saved PNR redisplay করে; `XI` unsaved work clear করে।
-4. Fare, printer ও e-ticket output শুধুই training simulation।
+# ✈️ SABRE GDS — সম্পূর্ণ প্রফেশনাল ট্রেনিং লেকচার শিট ও কমান্ড রেফারেন্স
+### Wings Fly Aviation Academy & GDS Training Hub — Sabre Simulator
 
 ---
 
-## Segment cancel o status change
+> **সিমুলেটর গাইডলাইন:**  
+> এটি রিয়েল Sabre GDS কমান্ড সিনট্যাক্স সমর্থিত প্রফেশনাল সিমুলেটর। সমস্ত কমান্ড বড় হাতের অক্ষরে (UPPERCASE) লিখে `Enter` চাপুন।  
+> বিশেষ চিহ্নের কিবোর্ড ম্যাপিং:  
+> - `+` অথবা `=` চাপলে পর্দায় আসবে `*` (Display চিহ্ন)  
+> - উদ্ধৃতি বা ব্যাকস্ল্যাশ কী (`'` বা `\`) চাপলে পর্দায় আসবে `¥` (Cross of Lorraine চিহ্ন)  
 
-| Command | Usage | Example |
+---
+
+## 📋 সূচিপত্র
+
+| অধ্যায় | বিষয়বস্তু |
+|---|---|
+| ০১ | এক নজরে সম্পূর্ণ Booking-to-Ticket ফ্লো |
+| ০২ | কিবোর্ড ম্যাপিং ও সাইন ইন / আউট |
+| ০৩ | এনকোড ও ডিকোড (Encode & Decode — শহর, এয়ারপোর্ট, এয়ারলাইন, এয়ারক্রাফট) |
+| ০৪ | টাইম ক্যালকুলেটর (Time Calculation — T*) |
+| ০৫ | ফ্লাইট সিডিউল ও অ্যাভেইলেবিলিটি (Availability — 1) |
+| ০৬ | সিট সেল ও সেগমেন্ট বুকিং (Sell — 0) এবং ARNK সেগমেন্ট |
+| ০৭ | প্যাসেঞ্জার নাম ফিল্ড (Name Entry — Adult, Child, Infant) |
+| ০৮ | এজেন্সি ফোন ও কন্টাক্ট ফিল্ড (Phone Field — 9) |
+| ০৯ | টিকেটিং টাইম লিমিট ও অ্যারেঞ্জমেন্ট (Ticketing Arrangement — 7) |
+| ১০ | রিসিভড ফিল্ড ও PNR সেভ (Received From & End Transaction — 6, E, ER) |
+| ১১ | PNR রিট্রিভ ও ডিসপ্লে কমান্ডসমূহ (*R, *I, *N, *P, *T ইত্যাদি) |
+| ১২ | স্পেশাল সার্ভিস রিকোয়েস্ট (SSR, Meal, Wheelchair, Mobile/Email — 3) |
+| ১৩ | পাসপোর্ট ও ট্রাভেল ডকুমেন্টস (DOCS / APIS Entry — 3DOCS) |
+| ১৪ | রিমার্কস ও অন্যান্য সার্ভিস ইনফো (Remarks & OSI — 5, 4) |
+| ১৫ | ফ্রিকোয়েন্ট ফ্লায়ার মেম্বারশিপ (Frequent Flyer — FF) |
+| ১৬ | প্যাসেঞ্জার ইমেইল ফিল্ড (Email Entry — PE¥) |
+| ১৭ | সেগমেন্ট ক্যানসেল ও স্ট্যাটাস মডিফাই (X, XI, WC, .HK) |
+| ১৮ | প্যাসেঞ্জার ডিভাইড ও স্প্লিট (Divide & Split PNR — D, F) |
+| ১৯ | পিএনআর ক্লোন (Clone PNR — EC) |
+| ২০ | ফেয়ার কোটেশন ও প্রাইসিং (Pricing & PQ — WP, WPA, PQ, *PQ) |
+| ২১ | প্রিন্টার অ্যাসাইনমেন্ট ও ডেজিগনেশন (Printer Assignment — W*BD, DSIV, PTR) |
+| ২২ | ইলেকট্রনিক টিকিট ইস্যু (Ticket Issuance — W¥PQ... / WTP) |
+| ২৩ | টিকিট ডিসপ্লে ও কুপন স্ট্যাটাস (*T) |
+| ২৪ | টিকিট ভয়েড (Ticket Void — WV*, WV1, VOID) |
+| ২৫ | টিকিট রিফান্ড ও পেনাল্টি পলিসি (Ticket Refund — RFND / WFR) |
+| ২৬ | টিকিট রিইস্যু ও এক্সচেঞ্জ (Ticket Reissue / Exchange — REISSUE) |
+| ২৭ | কিউ প্রসেসিং ও কিউ প্লেস (Queue Management — QP, Q/, QEP) |
+| ২৮ | অডিট ও হিস্ট্রি হিসেব (Job Record / Audit Trail — JR) |
+
+---
+
+## ০১. এক নজরে সম্পূর্ণ Booking-to-Ticket ফ্লো
+
+একটি আদর্শ পূর্ণাঙ্গ PNR তৈরি থেকে টিকিট ইস্যু পর্যন্ত কমান্ডের ধারাবাহিক রূপ:
+
+```text
+120JANDACSIN                                  -- ১. ঢাকা-সিঙ্গাপুর ফ্লাইট অ্যাভেইলেবিলিটি
+0Y1                                           -- ২. লাইন ১-এর Y ক্লাসের ১টি সিট সেল
+-RAHMAN/ANIS MR                               -- ৩. প্যাসেঞ্জার নাম এন্ট্রি
+9DAC 01700000000-A                            -- ৪. এজেন্সি কন্টাক্ট ফোন
+7TAW24OCT/                                    -- ৫. টিকেটিং টাইম লিমিট
+3CTCM/01757208244/P1                          -- ৬. প্যাসেঞ্জার মোবাইল SSR
+3CTCE/PASSENGER//GMAIL.COM/P1                 -- ৭. প্যাসেঞ্জার ইমেইল SSR
+3DOCS/P/BD/A12345678/BD/15JAN90/M/25OCT30/RAHMAN/ANIS-1.1 -- ৮. পাসপোর্ট ডকস
+WPA SQ                                        -- ৯. সিঙ্গাপুর এয়ারলাইন্স ফেয়ার লোড
+PQ                                            -- ১০. ফেয়ার প্রাইস কোট (PQ) স্টোর করা
+6SHAKIB                                       -- ১১. রিসিভড ফ্রম নাম দেওয়া
+ER                                            -- ১২. PNR সেভ ও রিলিসেন করা (PNR Locator তৈরি)
+IR                                            -- ১৩. সেভ করা PNR রিডিসপ্লে
+W*BD                                          -- ১৪. প্রিন্টার ওয়ার্ক এরিয়া রেডি করা
+DSIVE8C987                                    -- ১৫. প্রিন্টার আইডি অ্যাসাইন করা
+PTR/E8C987                                    -- ১৬. প্রিন্টার ডেজিগনেট করা
+W¥PQ1¥ASQ¥FINVAGT¥K7                          -- ১৭. ইনভয়েস সহ ফাইনাল টিকিট ইস্যু
+*T                                            -- ১৮. ইস্যুকৃত টিকিট ডিসপ্লে করে যাচাই
+```
+
+---
+
+## ০২. কিবোর্ড ম্যাপিং ও সাইন ইন / আউট
+
+### কিবোর্ড ম্যাপিং
+| চাপবেন | স্ক্রিনে আসবে | আসল Sabre প্রতীক | ব্যবহার |
+|---|---|---|---|
+| `+` বা `=` | `*` | Display | PNR, Ticket, Itinerary ইত্যাদি দেখার জন্য |
+| `'` বা `\` | `¥` | Cross of Lorraine | কমান্ডের একাধিক অংশ আলাদা বা যুক্ত করতে |
+| `Enter` | — | Send / Execute | প্রতিটি কমান্ড এক্সিকিউট করতে |
+
+### সাইন ইন ও সাইন আউট
+```text
+SI*123456                   -- Sabre সিস্টেমে সাইন ইন
+SO*                         -- বর্তমান সেশন থেকে সাইন আউট
+```
+
+---
+
+## ০৩. এনকোড ও ডিকোড (Encode & Decode)
+
+| কমান্ড | কাজ | উদাহরণ |
 |---|---|---|
-| `XE<N>` | Segment N delete | `XE1`, `XE2` |
-| `XK<N>` | Segment N cancel | `XK1` |
-| `WC<N><STATUS>` | Change segment N status | `WC1HK`, `WC2UC` |
+| `W/-<CITY/AIRPORT>` | শহর বা এয়ারপোর্টের নাম দিয়ে ৩ অক্ষরের IATA কোড খোঁজা | `W/-DHAKA`, `W/-BANGKOK` |
+| `W/-<CODE>` | ৩ অক্ষরের কোড দিয়ে শহর/এয়ারপোর্টের আসল নাম ডিকোড করা | `W/-DAC`, `W/-BKK`, `W/-LHR` |
+| `W/-AP<AIRPORT>` | নির্দিষ্ট এয়ারপোর্টের নাম ও কোড অনুসন্ধান | `W/-APHAZRAT SHAHJALAL` |
+| `W/-AL<AIRLINE>` | এয়ারলাইনের নাম দিয়ে ২ অক্ষরের IATA কোড অনুসন্ধান | `W/-ALEMIRATES`, `W/-ALBIMAN` |
+| `W/-CC<COUNTRY>` | দেশের নাম দিয়ে কান্ট্রি কোড অনুসন্ধান | `W/-CCBANGLADESH` |
+| `W/EQ<AIRCRAFT>` | বিমানের ইকুইপমেন্ট বা এয়ারক্রাফট কোড ডিকোড | `W/EQ777`, `W/EQ350` |
+| `W/-COUNTRIES` | ট্রেনিং কান্ট্রি কোডের সম্পূর্ণ তালিকা প্রদর্শন | `W/-COUNTRIES` |
 
-Valid statuses: HK SS HL UC WL GK SA PN NO
+---
 
-## OSI o Remarks
+## ০৪. টাইম ক্যালকুলেটর (Time Calculation — T*)
 
-| Command | Usage | Example |
-|---|---|---|
-| `4/<TEXT>` | Other Service Info (OSI) | `4/BG FREQUENT FLYER 123456` |
-| `5C/<TEXT>` | General remarks | `5C/PLEASE ISSUE BEFORE 20DEC` |
-| `*5` / `*RM` | Display remarks | `*5` |
-| `*PE` / `*PD` | Passenger detail | `*PD` |
+আন্তর্জাতিক ফ্লাইটের বিভিন্ন টাইম জোন ও ট্রানজিট সময় গণনার টুল:
+```text
+T*                          -- বর্তমান বিশ্বমানের সময় ও সিস্টেম ঘড়ি প্রদর্শন
+T*CDAC                      -- ঢাকার লোকাল সময় প্রদর্শন
+T*CDXB                      -- দুবাইয়ের লোকাল সময় প্রদর্শন
+```
 
-## PQ Delete
+---
 
-| Command | Usage | Example |
-|---|---|---|
-| `WPQD` | Delete stored PQ | `WPQD` |
+## ০৫. ফ্লাইট সিডিউল ও অ্যাভেইলেবিলিটি (Availability — 1)
 
-## Queue
+নির্দিষ্ট তারিখে নির্দিষ্ট রুটের সব ফ্লাইটের সিটের অবস্থান দেখা:
+```text
+120JANDACSIN                -- ২০ জানুয়ারি ঢাকা থেকে সিঙ্গাপুরের সরাসরি অ্যাভেইলেবিলিটি
+115FEBDACDXB¥EK             -- ১৫ ফেব্রুয়ারি ঢাকা-দুবাই শুধুমাত্র Emirates (EK) ফ্লাইটের সিট দেখা
+105MARDACHKG¥CX             -- ৫ মার্চ ঢাকা-হংকং Cathay Pacific ফ্লাইটের সিট দেখা
+```
+* **1:** Availability Command
+* **20JAN:** ফ্লাইটের তারিখ
+* **DACSIN:** Origin (DAC) এবং Destination (SIN)
+* **¥EK:** নির্দিষ্ট এয়ারলাইন ফিল্টার
 
-| Command | Usage | Example |
-|---|---|---|
-| `QEP` | Place PNR on default queue | `QEP` |
-| `QS<N>` | Place on specific queue | `QS14` |
-| `Q/` | Queue count display | `Q/` |
+---
 
-## Void, Refund o Reissue
+## ০৬. সিট সেল ও সেগমেন্ট বুকিং (Sell — 0) এবং ARNK
 
-| Command | Usage | Example |
-|---|---|---|
-| `VOID` | Void issued ticket | `VOID` |
-| `WV<TICKETNO>` | Void by ticket number | `WV6181234567890` |
-| `RFND` / `REFUND` | Process refund | `RFND` |
-| `REISSUE` | Reissue with new fare | `REISSUE` |
+অ্যাভেইলেবিলিটি দেখার পর যাত্রীর কাঙ্ক্ষিত ক্লাসে সিট লক করা:
+```text
+0Y1                         -- অ্যাভেইলেবিলিটির ১ নম্বর ফ্লাইটের Y ক্লাসে ১টি সিট বুক করা
+0J2                         -- অ্যাভেইলেবিলিটির ২ নম্বর ফ্লাইটের Business (J) ক্লাসে ১টি সিট বুক করা
+0A                          -- ARNK (Arrival Unknown) সেগমেন্ট যোগ করা (ওপেন-জ রুটের ট্রানজিট গ্যাপের জন্য)
+```
+* **0:** Sell Command
+* **Y / J:** বুকিং ক্লাস কোড (RBD)
+* **1 / 2:** অ্যাভেইলেবিলিটি ডিসপ্লের ফ্লাইট লাইন নম্বর
 
-Reissue flow: WPA AIRLINE -> PQ -> ER -> REISSUE
+---
 
-Void->Refund flow: VOID -> RFND
+## ০৭. প্যাসেঞ্জার নাম ফিল্ড (Name Entry — Adult, Child, Infant)
 
-## DOCS Modify
+Sabre-এ যাত্রীর নাম এন্ট্রি করতে মাইনাস (`-`) দিয়ে শুরু করতে হয়:
 
-Same 3DOCS command: if DOCS already exists for that passenger, it is replaced automatically.
+| যাত্রী ধরন | কমান্ড সিনট্যাক্স | বাস্তব উদাহরণ | বিবরণ |
+|---|---|---|---|
+| **Adult** | `-SURNAME/FIRSTNAME TITLE` | `-RAHMAN/ANIS MR` | পূর্ণবয়স্ক যাত্রী (P1 / 1.1) |
+| **২য় Adult** | `-SURNAME/FIRSTNAME TITLE` | `-KHAN/SUMI MS` | ২য় পূর্ণবয়স্ক যাত্রী (P2 / 1.2) |
+| **Child** | `-SURNAME/FIRSTNAME CHD/DDMMMYY` | `-RAHMAN/RIFAT CHD/15JAN15` | শিশু যাত্রী (৭৫% ফেয়ার) |
+| **Child বিকল্প** | `-SURNAME/FIRSTNAME*C08` | `-RAHMAN/RIFAT*C08` | বয়স সহ শিশু যাত্রী |
+| **Infant** | `-I/SURNAME/FIRSTNAME*DDMMMYY` | `-I/RAHMAN/AYAN MSTR*20JAN25` | কোলে চড়া শিশু (১০% ফেয়ার, আলাদা সিট লাগে না) |
+
+* নাম দেখতে: `*N` অথবা `*-`
+
+---
+
+## ০৮. এজেন্সি ফোন ও কন্টাক্ট ফিল্ড (Phone Field — 9)
+
+Sabre-এ ফোন ফিল্ড যোগ করতে `9` দিয়ে শুরু করতে হয়:
+```text
+9DAC 01700000000-A          -- এজেন্সির অফিসিয়াল ফোন নম্বর (A = Agency)
+9DAC 01800000000-H          -- যাত্রীর বাসার ফোন নম্বর (H = Home)
+*P অথবা *9                  -- PNR-এ সংরক্ষিত ফোন নম্বর ডিসপ্লে করা
+```
+
+---
+
+## ০৯. টিকেটিং টাইম লিমিট ও অ্যারেঞ্জমেন্ট (Ticketing Arrangement — 7)
+
+এয়ারলাইন্স কর্তৃক প্রদত্ত সময় অনুযায়ী টিকিট ইস্যুর ডেডলাইন সেট করা:
+```text
+7TAW24OCT/                  -- নির্দিষ্ট তারিখে টাইম লিমিট সেট করা (TAW = Ticket Auto Warning)
+7T-A                        -- এজেন্ট টিকেট অ্যারেঞ্জমেন্ট
+*7                          -- টাইম লিমিট স্ট্যাটাস প্রদর্শন
+```
+
+---
+
+## ১০. রিসিভড ফিল্ড ও PNR সেভ (Received From & End Transaction)
+
+Sabre-এ বুকিং সেভ করার বাধ্যতামূলক নিয়ম:
+```text
+6SHAKIB                     -- রিসিভড ফ্রম নাম এন্ট্রি (কে বুকিং করছে)
+6S                          -- সংক্ষেপে রিসিভড নাম
+ER                          -- End Transaction & Redisplay (PNR সেভ হয়ে ৬ সংখ্যার কোড তৈরি হবে)
+E                           -- শুধু সেভ করে স্ক্রিন ক্লিয়ার করা
+IR                          -- Ignore & Redisplay (সর্বশেষ সেভ হওয়া অবস্থায় ফেরত যাওয়া)
+I                           -- আন-সেভড কাজ মুছে ফেলা
+```
+
+---
+
+## ১১. PNR রিট্রিভ ও ডিসপ্লে কমান্ডসমূহ
+
+```text
+*R                          -- সম্পূর্ণ অ্যাক্টিভ PNR প্রদর্শন
+*I                          -- শুধুমাত্র ফ্লাইট শিডিউল / ইটিনারেরি দেখা
+*N                          -- প্যাসেঞ্জার নামের তালিকা দেখা
+*P বা *9                    -- ফোন নম্বর ফিল্ড দেখা
+*7                          -- টিকেটিং টাইম লিমিট দেখা
+*6                          -- রিসিভড ফ্রম রেকর্ড দেখা
+*SSR বা *3                  -- সব SSR স্পেশাল সার্ভিস কোড দেখা
+*P3D                        -- পাসপোর্ট ও ট্রাভেল ডকুমেন্টস দেখা
+*PQ                         -- ফেয়ার কোটেশন ও প্রাইসিং রেকর্ড দেখা
+*T                          -- ইস্যুকৃত ইলেকট্রনিক টিকিটের তথ্য দেখা
+*K7QZLM                     -- নির্দিষ্ট PNR লোকাল কোড দিয়ে বুকিং ওপেন করা
+XI                          -- বর্তমান স্ক্রিন ক্লিয়ার বা রিলিজ করা
+```
+
+---
+
+## ১২. স্পেশাল সার্ভিস রিকোয়েস্ট (SSR, Meal, Wheelchair, Mobile/Email — 3)
+
+Sabre-এ SSR এন্ট্রি করতে `3` দিয়ে শুরু করতে হয়:
+```text
+3MOML-1                     -- ১ নম্বর যাত্রীর জন্য মুসলিম খাবার (Muslim Meal)
+3VGML/P2                    -- ২ নম্বর যাত্রীর জন্য ভেজিটেরিয়ান মিল
+3WCHR/ELDERLY/P1            -- ১ নম্বর যাত্রীর জন্য হুইলচেয়ার সহায়তা
+3CTCM/01757208244/P1        -- এয়ারলাইন্সের জন্য প্যাসেঞ্জারের মোবাইল নম্বর নোটিফিকেশন
+3CTCE/SHAKIBAPON//GMAIL.COM/P1 -- প্যাসেঞ্জার ইমেইল (@ এর স্থলে // দিতে হয়)
+*SSR অথবা *3                -- সমস্ত SSR রিকোয়েস্ট দেখা
+```
+
+---
+
+## ১৩. পাসপোর্ট ও ট্রাভেল ডকুমেন্টস (DOCS / APIS Entry — 3DOCS)
+
+আন্তর্জাতিক ভ্রমণের জন্য বাধ্যতামূলক পাসপোর্ট তথ্য দেওয়ার সঠিক Sabre ফরম্যাট:
+```text
+3DOCS/P/BD/A12345678/BD/15JAN90/M/25OCT30/RAHMAN/ANIS-1.1
+```
+* **3DOCS:** পাসপোর্ট SSR কমান্ড
+* **P:** Document Type (Passport)
+* **BD:** Issuing Country Code
+* **A12345678:** পাসপোর্ট নম্বর
+* **BD:** Nationality
+* **15JAN90:** জন্ম তারিখ (DOB)
+* **M / F:** Gender (পুরুষ/মহিলা)
+* **25OCT30:** পাসপোর্টের মেয়াদোত্তীর্ণের তারিখ (Expiry Date)
+* **RAHMAN/ANIS:** সারনেম ও ফার্স্টনেম
+* **-1.1:** প্যাসেঞ্জার নম্বর রেফারেন্স (২য় যাত্রীর জন্য `-1.2`, ৩য় জনের জন্য `-1.3`)
+
+---
+
+## ১৪. রিমার্কস ও অন্যান্য সার্ভিস ইনফো (Remarks & OSI — 5, 4)
+
+```text
+5C/PLEASE ISSUE BEFORE 20DEC -- সাধারণ এজেন্সির নোট/মন্তব্য
+5H-VIP PASSENGER CORPORATE   -- হিস্টোরিক্যাল রিমার্ক
+*5 অথবা *P5                  -- রিমার্কস ফিল্ড প্রদর্শন
+4/EK VIP MINISTER PASSENGER  -- এয়ারলাইন্স ইনফো (OSI — Other Service Information)
+```
+
+---
+
+## ১৫. ফ্রিকোয়েন্ট ফ্লায়ার মেম্বারশিপ (Frequent Flyer — FF)
+
+```text
+FFAA12345678                -- আমেরিকান এয়ারলাইন্স (AA) লয়্যালটি নম্বর যোগ করা
+FFSQ98765432                -- সিঙ্গাপুর এয়ারলাইন্স লয়্যালটি কোড
+*FF                         -- সংরক্ষিত ফ্রিকোয়েন্ট ফ্লায়ার নম্বর প্রদর্শন
+```
+
+---
+
+## ১৬. প্যাসেঞ্জার ইমেইল ফিল্ড (Email Entry — PE¥)
+
+```text
+PE¥PASSENGER//GMAIL.COM¥    -- সরাসরি ইমেইল ফিল্ড তৈরি (@ এর স্থলে // দিতে হয়)
+*PE                         -- সংরক্ষিত ইমেইল ঠিকানা প্রদর্শন
+```
+
+---
+
+## ১৭. সেগমেন্ট ক্যানসেল ও স্ট্যাটাস মডিফাই (Cancel & Modify)
+
+```text
+X1                          -- PNR-এর ১ নম্বর ফ্লাইট সেগমেন্ট ক্যানসেল করা
+X2                          -- ২ নম্বর ফ্লাইট সেগমেন্ট ক্যানসেল করা
+XI                          -- সম্পূর্ণ ইটিনারেরি একবারে ক্যানসেল করা
+WC1HK                       -- ১ নম্বর সেগমেন্টের স্ট্যাটাস কনফার্ম (HK) করা
+.1HK                        -- অল্টারনেট কনফার্মেশন ফরম্যাট
+```
+
+---
+
+## ১৮. প্যাসেঞ্জার ডিভাইড ও স্প্লিট (Divide & Split PNR — D, F)
+
+একাধিক যাত্রীর PNR থেকে কোনো একজনকে আলাদা করে নতুন PNR বানাতে:
+```text
+D1                          -- ১ নম্বর যাত্রীকে আলাদা করার জন্য ডিভাইড সিলেক্ট
+F                           -- File & Split সম্পন্ন করা (নতুন PNR তৈরি হবে)
+6SHAKIB                     -- রিসিভড দেওয়া
+ER                          -- নতুন PNR সেভ ও সংরক্ষণ
+```
+
+---
+
+## ১৯. পিএনআর ক্লোন (Clone PNR — EC)
+
+একই রুটের যাত্রী যদি অন্য কারও বুকিংয়ের আদলে হুবহু নতুন করতে চান:
+```text
+EC                          -- বর্তমান PNR-এর ফ্লাইট ও বুকিং কপি করে নতুন উইন্ডোতে নেওয়া
+```
+
+---
+
+## ২০. ফেয়ার কোটেশন ও প্রাইসিং (Pricing & PQ)
+
+```text
+WPA SQ                      -- সিঙ্গাপুর এয়ারলাইন্সের বুকড ক্লাসের ফেয়ার ক্যালকুলেশন
+WP                          -- জেনারেল ফেয়ার প্রাইসিং
+WPNI                        -- বার্গেইন ফাইন্ডার / নো-ইটিনারেরি কোট
+WPNCB                       -- লোয়েস্ট অ্যাভেইলেবল বুকিং ক্লাসের ফেয়ার কোট
+PQ                          -- প্রাইস কোটেশন (PQ) তৈরি ও সংরক্ষণ
+*PQ                         -- সংরক্ষিত PQ রেকর্ড ও ট্যাক্স ব্রেকডাউন দেখা
+WPQD                        -- সংরক্ষিত ভুল PQ রেকর্ড ডিলিট করা
+```
+
+---
+
+## ২১. প্রিন্টার অ্যাসাইনমেন্ট ও ডেজিগনেশন (Printer Assignment — ইস্যুর পূর্বে বাধ্যতামূলক)
+
+টিকেট ইস্যুর পূর্বে Sabre টার্মিনালে ভার্চুয়াল প্রিন্টার চালু করার ৩টি ধারাবাহিক কমান্ড:
+```text
+W*BD                        -- ১. প্রিন্টার বোর্ড ও সেলস রিপোর্ট চেক করা (OK-0008)
+DSIVE8C987                  -- ২. ডিভাইস ও প্রিন্টার কোড অ্যাসাইন করা (OK PTR ASSIGNED)
+PTR/E8C987                  -- ৩. প্রিন্টার ডেজিগনেট সম্পন্ন করা (PRINTER DESIGNATED)
+```
+
+---
+
+## ২২. ইলেকট্রনিক টিকিট ইস্যু (Ticket Issuance)
+
+```text
+W¥PQ1¥ASQ¥FINVAGT¥K7        -- প্রফেশনাল ইস্যু: PQ ১ নম্বর, SQ এয়ারলাইন, ইনভয়েস পেমেন্ট ও ৭% ট্যাক্স
+W¥PQ1¥ASQ¥FCASH             -- ক্যাশ পেমেন্টে টিকিট ইস্যু
+WTP                         -- ট্রেইনিং সিমুলেটরে কুইক ১-ক্লিক টিকিট প্রিন্ট
+```
+
+---
+
+## ২৩. টিকিট ডিসপ্লে ও কুপন স্ট্যাটাস (*T)
+
+টিকেট সফলভাবে ইস্যু হওয়ার পর কুপনের স্ট্যাটাস দেখা:
+```text
+*T                          -- ইস্যুকৃত ইলেকট্রনিক টিকিট নম্বর, রুট ও কুপন স্ট্যাটাস দেখা
+```
+* স্ট্যাটাস **O (Open):** টিকিট ভ্রমণের জন্য সম্পূর্ণ প্রস্তুত ও ভ্যালিড।
+
+---
+
+## ২৪. টিকিট ভয়েড (Ticket Void — একই দিনে ক্যান্সেলেশন)
+
+একই দিনে কোনো চার্জ ছাড়াই টিকিট বাতিল ও সেলস লক ক্যানসেল করা:
+```text
+WV*                         -- ভয়েড করার উপযোগী ইস্যুকৃত টিকিটের তালিকা দেখা
+WV1                         -- তালিকার ১ নম্বর টিকিট ভয়েড করা
+WV6181234567890             -- নির্দিষ্ট টিকিট নম্বর দিয়ে সরাসরি ভয়েড করা
+VOID                        -- কুইক ভয়েড কমান্ড
+```
+
+---
+
+## ২৫. টিকিট রিফান্ড ও পেনাল্টি পলিসি (Ticket Refund)
+
+যাত্রী ট্রাভেল ক্যানসেল করলে টিকিট রিফান্ড প্রসেস করা:
+```text
+RFND                        -- রিফান্ড মাস্ক ওপেন করা
+REFUND                      -- অটোমেটিক পেনাল্টি বাদ দিয়ে রিফান্ড রিসিট তৈরি
+WFR...                      -- Sabre রিফান্ড প্রসেসিং
+```
+
+---
+
+## ২৬. টিকিট রিইস্যু ও এক্সচেঞ্জ (Ticket Reissue / Exchange)
+
+যাত্রী ভ্রমণের তারিখ পরিবর্তন করলে:
+```text
+X1                          -- ১. পুরনো ফ্লাইট বাতিল
+125OCTDACSIN                -- ২. নতুন তারিখের অ্যাভেইলেবিলিটি
+0Y1                         -- ৩. নতুন সিট বুকিং
+WPA SQ                      -- ৪. নতুন ফেয়ার হিসাব
+PQ                          -- ৫. নতুন PQ রেকর্ড তৈরি
+REISSUE                     -- ৬. এক্সচেঞ্জ মাস্ক চালু ও টিকিট রিইস্যু সম্পন্ন করা
+*T                          -- ৭. নতুন টিকেট নম্বর যাচাই
+```
+
+---
+
+## ২৭. কিউ প্রসেসিং ও কিউ প্লেস (Queue Management)
+
+```text
+Q/                          -- এজেন্সির সমস্ত কিউ ও মেসেজ সংখ্যা দেখা
+QP/100/11                   -- PNR-কে কিউ ১০০-এর সাব-ক্যাটাগরি ১১-এ পাঠানো
+QEP                         -- বর্তমান PNR-কে ডিফল্ট কিউতে প্লেস করা
+QS14                        -- কিউ ১৪ ওপেন করে PNR চেক করা
+```
+
+---
+
+## ২৮. অডিট ও হিস্ট্রি হিসেব (Job Record / Audit Trail — JR)
+
+```text
+JR                          -- সম্পূর্ণ PNR-এর হিস্ট্রি ও অডিট ট্রেইল দেখা (কে কোন সময়ে কী কমান্ড দিয়েছে)
+W*BD                        -- আজকের দিনের টিকিট সেলস রিপোর্ট ও কাউন্টার অ্যাকাউন্টস দেখা
+```
+
+---
+**লেকচার নোট সমাপ্ত। শুভ প্রশিক্ষণ! 🎓**
