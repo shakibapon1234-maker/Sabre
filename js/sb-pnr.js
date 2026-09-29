@@ -117,13 +117,35 @@ function sbLoadLessonPNR() {
 --------------------------------------------------------------------- */
 function sbEcho(cmd) {
   const term = document.getElementById('termArea');
+  if (!term) return null;
   if (term.querySelector('.ph')) term.innerHTML = '';
   const echo = document.createElement('div');
   echo.className = /^WPA/.test(cmd.trim()) ? 'line-echo fare-command' : 'line-echo';
   const text = cmd.toUpperCase().trim();
   echo.textContent = text.endsWith('«') ? text : (text + '«');
   term.appendChild(echo);
+  if (typeof window !== 'undefined') window._sbLastCommandEcho = echo;
+  return echo;
 }
+function sbScrollToCommand(echo) {
+  const term = document.getElementById('termArea');
+  if (!term) return;
+  const target = echo || (typeof window !== 'undefined' ? window._sbLastCommandEcho : null);
+  if (!target) return;
+
+  try {
+    const termRect = term.getBoundingClientRect();
+    const targetRect = target.getBoundingClientRect();
+    const offsetDiff = targetRect.top - termRect.top;
+    term.scrollTop = Math.max(0, term.scrollTop + offsetDiff);
+  } catch (e) {
+    if (typeof target.scrollIntoView === 'function') {
+      target.scrollIntoView({ block: 'start', behavior: 'auto' });
+    }
+  }
+}
+if (typeof window !== 'undefined') window.sbScrollToCommand = sbScrollToCommand;
+
 function sbPrint(text, cls) {
   const term = document.getElementById('termArea');
   if (!term) return;
@@ -136,7 +158,9 @@ function sbPrint(text, cls) {
   line.className = cls || (str === '*' ? 'line-display' : 'line-pnr');
   line.textContent = str || '\u00A0';
   term.appendChild(line);
-  term.scrollTop = term.scrollHeight;
+  if (typeof window === 'undefined' || !window._sbSuppressScrollToBottom) {
+    term.scrollTop = term.scrollHeight;
+  }
 }
 function sbWarn(text) { sbPrint(text, 'line-warn'); }
 function sbPrintSsrError(lines) {

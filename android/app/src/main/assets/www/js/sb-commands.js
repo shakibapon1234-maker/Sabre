@@ -1849,23 +1849,35 @@ function sendCmd() {
   const val = input.value.trim().replace(/«$/, '');
   if (!val) return;
   if (typeof sbRememberCommand === 'function') sbRememberCommand(val.toUpperCase());
-  sbEcho(val);
 
-  // Check if command uses Cross of Lorraine (¥/☨/‡/§) as an internal qualifier:
-  // e.g.:
-  // - W¥... (Issue ticket: W¥PQ1¥AEY¥FCA¥KP0)
-  // - 1<date><pair>¥... (Availability airline qualifier: 120DECJEDAUH¥EY)
-  // - T[¤*]...¥... (Time calc: T¤25FEB¥80)
-  // - PE¥... (Passenger email: PE¥email@gmail.com¥-1)
-  const isInternalQualifier = /^W[¥☨‡§]/i.test(val) ||
-                              /^1\d{2}[A-Z]{3}[A-Z]{6}[¥☨‡§]/i.test(val) ||
-                              /^T[¤*].*[¥☨‡§]/i.test(val) ||
-                              /^PE[¥☨‡§]/i.test(val);
+  if (typeof window !== 'undefined') window._sbSuppressScrollToBottom = true;
+  let echo = null;
+  if (typeof sbEcho === 'function') echo = sbEcho(val);
 
-  if (isInternalQualifier) {
-    sbParse(val);
-  } else {
-    val.split(/[¥☨‡§]/).map(entry => entry.trim()).filter(Boolean).forEach(sbParse);
+  try {
+    // Check if command uses Cross of Lorraine (¥/☨/‡/§) as an internal qualifier:
+    // e.g.:
+    // - W¥... (Issue ticket: W¥PQ1¥AEY¥FCA¥KP0)
+    // - 1<date><pair>¥... (Availability airline qualifier: 120DECJEDAUH¥EY)
+    // - T[¤*]...¥... (Time calc: T¤25FEB¥80)
+    // - PE¥... (Passenger email: PE¥email@gmail.com¥-1)
+    const isInternalQualifier = /^W[¥☨‡§]/i.test(val) ||
+                                /^1\d{2}[A-Z]{3}[A-Z]{6}[¥☨‡§]/i.test(val) ||
+                                /^T[¤*].*[¥☨‡§]/i.test(val) ||
+                                /^PE[¥☨‡§]/i.test(val);
+
+    if (isInternalQualifier) {
+      sbParse(val);
+    } else {
+      val.split(/[¥☨‡§]/).map(entry => entry.trim()).filter(Boolean).forEach(sbParse);
+    }
+  } finally {
+    if (typeof window !== 'undefined') window._sbSuppressScrollToBottom = false;
   }
+
   input.value = '';
+
+  if (echo && typeof sbScrollToCommand === 'function') {
+    sbScrollToCommand(echo);
+  }
 }

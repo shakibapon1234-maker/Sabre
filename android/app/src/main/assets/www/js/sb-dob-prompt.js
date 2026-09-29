@@ -283,10 +283,15 @@ function sbSendChdInfDob() {
   sbState.receivedFrom = null;
 
   // Execute all SSR commands so terminal outputs matches Screenshot 3
-  commandsToRun.forEach(cmd => {
-    sbEcho(cmd);
+  let firstEcho = null;
+  commandsToRun.forEach((cmd, idx) => {
+    const echo = sbEcho(cmd);
+    if (idx === 0) firstEcho = echo;
     sbParse(cmd);
   });
+  if (firstEcho && typeof sbScrollToCommand === 'function') {
+    sbScrollToCommand(firstEcho);
+  }
 }
 
 function sbInitDraggableModal(modal) {
