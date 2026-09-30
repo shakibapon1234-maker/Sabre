@@ -346,42 +346,110 @@ function _sbRenderBfmResultsInContainer(container, org, dst, date1, dst2, date2,
   container.innerHTML = outHtml;
 }
 
-/* ── Sell / Hold Segment from BFM / FareShop (0J1, 01J1, 02J1) ── */
-function sbSellBfmOption(optIndex, qty = 1) {
-  const options = window._sbBfmOptions || (typeof sbState !== 'undefined' ? sbState._bfmOptions : null);
+
+function _sbGetDefaultBfmOptions(dateStr) {
+  return [
+    {
+      carrier: 'AI',
+      fare: 28018,
+      legs: [
+        { seg: 1, al: 'AI', fn: '238', cls: 'T', dtStr: dateStr || '29NOV', dayNum: 1, org: 'DAC', dst: 'DEL', dt: '1510', at: '1730', eq: '320', stops: 0 },
+        { seg: 1, al: 'AI', fn: '2115', cls: 'T', dtStr: dateStr || '30NOV', dayNum: 2, org: 'DEL', dst: 'SIN', dt: '0340', at: '1210', eq: '321', stops: 0 }
+      ]
+    },
+    {
+      carrier: 'BS',
+      fare: 31313,
+      legs: [
+        { seg: 1, al: 'BS', fn: '315', cls: 'K', dtStr: dateStr || '29NOV', dayNum: 1, org: 'DAC', dst: 'KUL', dt: '0825', at: '1420', eq: '333', stops: 0 }
+      ]
+    },
+    {
+      carrier: 'MU',
+      fare: 33865,
+      legs: [
+        { seg: 1, al: 'MU', fn: '2036', cls: 'T', dtStr: dateStr || '12OCT', dayNum: 1, org: 'DAC', dst: 'KMG', dt: '1400', at: '1820', eq: '32Q', stops: 0 },
+        { seg: 1, al: 'MU', fn: '9647', cls: 'T', dtStr: dateStr || '12OCT', dayNum: 1, org: 'KMG', dst: 'SIN', dt: '2110', at: '0130', eq: '7M8', stops: 0, dayOver: '13OCT 2' }
+      ]
+    },
+    {
+      carrier: 'TG',
+      fare: 38830,
+      legs: [
+        { seg: 1, al: 'TG', fn: '340', cls: 'W', dtStr: dateStr || '12OCT', dayNum: 2, org: 'DAC', dst: 'BKK', dt: '0245', at: '0615', eq: '320', stops: 0 },
+        { seg: 1, al: 'TG', fn: '403', cls: 'W', dtStr: dateStr || '12OCT', dayNum: 2, org: 'BKK', dst: 'SIN', dt: '0800', at: '1115', eq: '359', stops: 0 }
+      ]
+    },
+    {
+      carrier: 'SQ',
+      fare: 46250,
+      legs: [
+        { seg: 1, al: 'SQ', fn: '447', cls: 'V', dtStr: dateStr || '29NOV', dayNum: 1, org: 'DAC', dst: 'SIN', dt: '2355', at: '0605', eq: '78X', stops: 0 }
+      ]
+    }
+  ];
+}
+
+/* ── Sell / Hold Segment from BFM / FareShop (JR03, JR01, 01J1, 02J3) ── */
+function sbSellBfmOption(optIndex, qty) {
+  if (qty === undefined) qty = 1;
+  let options = window._sbBfmOptions || (typeof sbState !== 'undefined' ? sbState._bfmOptions : null);
+
+  // If no options in memory yet, use realistic live Sabre options
   if (!options || !options[optIndex - 1]) {
-    if (typeof sbWarn === 'function') sbWarn(`NO AVAIL.`);
+    const today = sbGetSabreDate();
+    options = _sbGetDefaultBfmOptions(today);
+    window._sbBfmOptions = options;
+    if (typeof sbState !== 'undefined') sbState._bfmOptions = options;
+  }
+
+  if (!options || !options[optIndex - 1]) {
+    if (typeof sbWarn === 'function') sbWarn('NO AVAIL.');
     return false;
   }
 
   const opt = options[optIndex - 1];
   if (typeof sbState === 'undefined') return false;
 
+  const MON = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+
   sbPrint('BOOKING STATUS: SEGMENTS ADDED TO PNR', 'sb-booking-status');
 
   opt.legs.forEach(leg => {
+    const dtStr = leg.dtStr || (leg.d ? (String(leg.d.getDate()).padStart(2,'0') + MON[leg.d.getMonth()]) : sbGetSabreDate());
+    const dayNum = leg.dayNum || leg.dayLet || (leg.d ? (leg.d.getDay() === 0 ? 1 : leg.d.getDay() + 1) : 1);
+
     sbState.booked.push({
       al: leg.al,
       fn: leg.fn,
       cls: leg.cls,
-      date: leg.dtStr,
+      date: dtStr,
       dep: leg.org,
       arr: leg.dst,
-      status: `SS${qty}`,
+      status: 'SS' + qty,
       depT: leg.dt,
       arrT: leg.at,
-      eq: leg.eq,
-      day: leg.dayLet,
-      dayOver: 0
+      eq: leg.eq || '738',
+      day: dayNum,
+      dayOver: leg.dayOver || 0
     });
+  });
 
-    const s = sbState.booked[sbState.booked.length - 1];
-    sbPrint(` ${sbState.booked.length} ${s.al.padEnd(5)} ${s.fn.padEnd(4)} ${s.cls.padEnd(2)} ${s.date} ${s.day.padEnd(3)}  ${s.dep.padEnd(4)} ${s.arr.padEnd(4)} ${s.status.padEnd(4)} ${s.depT}  ${s.arrT}`);
+  // Display full PNR itinerary matching live Sabre screenshot media_1790759569500.png
+  sbState.booked.forEach(function(s, idx) {
+    const n = idx + 1;
+    if (s.al === 'ARNK') {
+      sbPrint(' ' + n + '   ARNK');
+      return;
+    }
+    const fnStr = (s.al + String(s.fn).padStart(4, ' ') + s.cls).padEnd(8);
+    const dayOverTag = s.dayOver ? '   ' + s.dayOver : '';
+    sbPrint(' ' + n + ' ' + fnStr + ' ' + s.date + ' ' + s.day + ' ' + s.dep + s.arr + ' ' + s.status + '  ' + s.depT + '  ' + s.arrT + dayOverTag + '  /DC' + s.al + ' /E');
   });
 
   // Store fare quote in sbState
   if (typeof sbBuildFareQuote === 'function' && typeof sbGetFareForCarrier === 'function') {
-    const f = sbGetFareForCarrier(opt.carrier || 'AI');
+    const f = sbGetFareForCarrier(opt.carrier || opt.legs[0].al);
     f.total = opt.fare;
     f.baseBdt = Math.round(opt.fare * 0.85);
     f.tax = opt.fare - f.baseBdt;
@@ -390,8 +458,11 @@ function sbSellBfmOption(optIndex, qty = 1) {
     sbState.fareQuote = sbBuildFareQuote(f);
   }
 
+  if (typeof sbSyncSidePanel === 'function') sbSyncSidePanel();
+
   return true;
 }
+
 
 if (typeof window !== 'undefined') {
   window.cmdFareShopJR = cmdFareShopJR;

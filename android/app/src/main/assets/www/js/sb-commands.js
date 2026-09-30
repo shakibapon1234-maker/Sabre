@@ -1370,6 +1370,8 @@ function cmdJR(raw) {
     if (typeof cmdFareShopJR === 'function') return cmdFareShopJR();
   }
 
+
+
   const m = upper.match(/^JR\.([A-Z]{3})\/S-O?([A-Z])([A-Z]{3})(\d{2}[A-Z]{3})(?:\/S-O?([A-Z])([A-Z]{3})(\d{2}[A-Z]{3}))?(?:\/P-(.*))?$/);
   if (m) {
     const org = m[1];
@@ -1761,7 +1763,15 @@ function sbParse(raw) {
   const upper = cmd.toUpperCase();
 
   // ── Journey Record (JR) — PDF: JR  JR.JED/S-OYBOM15MAY... ─────────────
-  if (/^JR(?:\.|\s|$)/i.test(upper)) return cmdJR(upper);
+  // JR0N (e.g. JR01, JR02, JR03) - Hold itinerary option from FareShop
+  if (/^JR0\d+$/i.test(upper)) {
+    const optNum = parseInt(upper.slice(3), 10);
+    if (typeof sbSellBfmOption === 'function') {
+      if (!sbSellBfmOption(optNum, 1)) sbWarn('NO ITINERARY OPTIONS AVAILABLE - RUN FARESHOP/JR FIRST');
+    } else { sbWarn('NO ITINERARY OPTIONS AVAILABLE - RUN FARESHOP/JR FIRST'); }
+    return;
+  }
+  if (/^JR(?:\\.|\\s|$)/i.test(upper)) return cmdJR(upper);
 
   // ── Time Calculator — PDF: T¤FEB  T¤25FEB¥80 ─────────────────────────
   if (/^T[¤*]/i.test(upper)) return cmdTimeCalc(upper);

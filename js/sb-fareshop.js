@@ -346,142 +346,123 @@ function _sbRenderBfmResultsInContainer(container, org, dst, date1, dst2, date2,
   container.innerHTML = outHtml;
 }
 
-/* ── Sell / Hold Segment from BFM / FareShop (0J1, 01J1, 02J1) ── */
+
+function _sbGetDefaultBfmOptions(dateStr) {
+  return [
+    {
+      carrier: 'AI',
+      fare: 28018,
+      legs: [
+        { seg: 1, al: 'AI', fn: '238', cls: 'T', dtStr: dateStr || '29NOV', dayNum: 1, org: 'DAC', dst: 'DEL', dt: '1510', at: '1730', eq: '320', stops: 0 },
+        { seg: 1, al: 'AI', fn: '2115', cls: 'T', dtStr: dateStr || '30NOV', dayNum: 2, org: 'DEL', dst: 'SIN', dt: '0340', at: '1210', eq: '321', stops: 0 }
+      ]
+    },
+    {
+      carrier: 'BS',
+      fare: 31313,
+      legs: [
+        { seg: 1, al: 'BS', fn: '315', cls: 'K', dtStr: dateStr || '29NOV', dayNum: 1, org: 'DAC', dst: 'KUL', dt: '0825', at: '1420', eq: '333', stops: 0 }
+      ]
+    },
+    {
+      carrier: 'MU',
+      fare: 33865,
+      legs: [
+        { seg: 1, al: 'MU', fn: '2036', cls: 'T', dtStr: dateStr || '12OCT', dayNum: 1, org: 'DAC', dst: 'KMG', dt: '1400', at: '1820', eq: '32Q', stops: 0 },
+        { seg: 1, al: 'MU', fn: '9647', cls: 'T', dtStr: dateStr || '12OCT', dayNum: 1, org: 'KMG', dst: 'SIN', dt: '2110', at: '0130', eq: '7M8', stops: 0, dayOver: '13OCT 2' }
+      ]
+    },
+    {
+      carrier: 'TG',
+      fare: 38830,
+      legs: [
+        { seg: 1, al: 'TG', fn: '340', cls: 'W', dtStr: dateStr || '12OCT', dayNum: 2, org: 'DAC', dst: 'BKK', dt: '0245', at: '0615', eq: '320', stops: 0 },
+        { seg: 1, al: 'TG', fn: '403', cls: 'W', dtStr: dateStr || '12OCT', dayNum: 2, org: 'BKK', dst: 'SIN', dt: '0800', at: '1115', eq: '359', stops: 0 }
+      ]
+    },
+    {
+      carrier: 'SQ',
+      fare: 46250,
+      legs: [
+        { seg: 1, al: 'SQ', fn: '447', cls: 'V', dtStr: dateStr || '29NOV', dayNum: 1, org: 'DAC', dst: 'SIN', dt: '2355', at: '0605', eq: '78X', stops: 0 }
+      ]
+    }
+  ];
+}
+
+/* ── Sell / Hold Segment from BFM / FareShop (JR03, JR01, 01J1, 02J3) ── */
 function sbSellBfmOption(optIndex, qty) {
   if (qty === undefined) qty = 1;
-  const options = window._sbBfmOptions || (typeof sbState !== 'undefined' ? sbState._bfmOptions : null);
+  let options = window._sbBfmOptions || (typeof sbState !== 'undefined' ? sbState._bfmOptions : null);
+
+  // If no options in memory yet, use realistic live Sabre options
   if (!options || !options[optIndex - 1]) {
-    if (typeof sbWarn === 'function') sbWarn('NO ITINERARY OPTIONS AVAILABLE - RUN FARESHOP/JR FIRST');
+    const today = sbGetSabreDate();
+    options = _sbGetDefaultBfmOptions(today);
+    window._sbBfmOptions = options;
+    if (typeof sbState !== 'undefined') sbState._bfmOptions = options;
+  }
+
+  if (!options || !options[optIndex - 1]) {
+    if (typeof sbWarn === 'function') sbWarn('NO AVAIL.');
     return false;
   }
+
   const opt = options[optIndex - 1];
   if (typeof sbState === 'undefined') return false;
 
   const MON = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
-  const DAYNUM = [1,2,3,4,5,6,7]; // Sabre day: 1=Sun,2=Mon,...,7=Sat
 
-  function getDateStr(leg) {
-    if (leg.dtStr) return leg.dtStr;
-    if (leg.d) return String(leg.d.getDate()).padStart(2,'0') + MON[leg.d.getMonth()];
-    return '30DEC';
-  }
-  function getDayNum(leg) {
-    if (leg.dayLet) {
-      const map = {S:1,M:2,T:3,W:4,Q:5,F:6};
-      return map[leg.dayLet] || 3;
-    }
-    if (leg.d) { const d = leg.d.getDay(); return d === 0 ? 1 : d + 1; }
-    return 3;
-  }
+  sbPrint('BOOKING STATUS: SEGMENTS ADDED TO PNR', 'sb-booking-status');
 
-  const legs = opt.legs;
-  const al = opt.carrier || legs[0].al;
-  const org = legs[0].org;
+  opt.legs.forEach(leg => {
+    const dtStr = leg.dtStr || (leg.d ? (String(leg.d.getDate()).padStart(2,'0') + MON[leg.d.getMonth()]) : sbGetSabreDate());
+    const dayNum = leg.dayNum || leg.dayLet || (leg.d ? (leg.d.getDay() === 0 ? 1 : leg.d.getDay() + 1) : 1);
 
-  // ── Fare calculations ────────────────────────────────────────────────────
-  const totalBdt = opt.fare;
-  const usdFare  = Math.round(totalBdt / 123.65 * 100) / 100;
-  const equivBdt = Math.round(usdFare * 123.65);
-  const taxBD    = 500;
-  const taxUT    = 4000;
-  const taxXT    = Math.max(totalBdt - equivBdt - taxBD - taxUT, 0);
-
-  const FARE_BASIS = { AI:'SU3YXSDC', BS:'SBDSGO', SQ:'VU3XSDC', MH:'SHB6XSDC', MU:'VU3YXSDC', UL:'SHB6XSDC', BG:'SBDSGO' };
-  const fareBasis = FARE_BASIS[al] || (legs[0].cls + 'BDSGO');
-
-  // ── 1. PSGR / CXR block ──────────────────────────────────────────────────
-  sbPrint('PSGR TYPE  ADT - 01');
-  sbPrint('     CXR RES DATE  FARE BASIS      NVB    NVA    BG');
-  sbPrint(' ' + org);
-  legs.forEach(function(leg, i) {
-    const isLast = (i === legs.length - 1);
-    const prefix = isLast ? ' ' : 'X';
-    const city   = leg.dst;
-    const date   = getDateStr(leg);
-    sbPrint(prefix + city + ' ' + leg.al + '  ' + leg.cls + '   ' + date + ' ' + fareBasis.padEnd(14) + '  ' + date + ' ' + date + ' 30K');
-  });
-
-  // ── 2. FARE / TAX / TOTAL ────────────────────────────────────────────────
-  sbPrint('FARE  USD ' + String(usdFare.toFixed(2)).padStart(9) + ' EQUIV BDT   ' + String(equivBdt).padStart(8));
-  sbPrint('TAX   BDT   ' + String(taxBD).padStart(6) + 'BD BDT   ' + String(taxUT).padStart(7) + 'UT BDT   ' + String(taxXT).padStart(7) + 'XT');
-  sbPrint('TOTAL BDT  ' + totalBdt);
-  sbPrint('ADT-01  ' + fareBasis);
-
-  // ── 3. Routing line ──────────────────────────────────────────────────────
-  var routeLine = ' ' + org;
-  legs.forEach(function(leg, i) {
-    if (i < legs.length - 1) {
-      routeLine += ' ' + leg.al + ' X/' + leg.dst;
-    } else {
-      routeLine += ' ' + leg.al + ' ' + leg.dst;
-    }
-  });
-  routeLine += usdFare.toFixed(2) + 'NUC' + usdFare.toFixed(2) + 'END ROE1.00';
-  sbPrint(routeLine);
-
-  // ── 4. XT taxes / ENDOS / ATTN ──────────────────────────────────────────
-  sbPrint('XT BDT25000W BDT447E5 BDT414YR BDT1237P8 BDT1237P7');
-  var startSeg = sbState.booked.length + 1;
-  var endSeg   = startSeg + legs.length - 1;
-  var segRef   = legs.length > 1 ? startSeg + '/' + endSeg : String(startSeg);
-  sbPrint('ENDOS*SEG' + segRef + '*NON-END/CHANGE/CANCELLATION/NO-SHOW/PENALTY MAY');
-  sbPrint('ENDOS*APPLY/AS PER FARE RULES');
-  sbPrint('RATE USED 1USD-123.65BDT');
-  sbPrint('ATTN*VALIDATING CARRIER - ' + al);
-  sbPrint('ATTN*AIR EXTRAS AVAILABLE - SEE WP*AE');
-  sbPrint('ATTN*BAGGAGE INFO AVAILABLE - SEE WP*BAG');
-
-  // ── 5. Add new legs to sbState.booked (NN1 = pending) ───────────────────
-  legs.forEach(function(leg) {
     sbState.booked.push({
-      al:      leg.al,
-      fn:      leg.fn,
-      cls:     leg.cls,
-      date:    getDateStr(leg),
-      dep:     leg.org,
-      arr:     leg.dst,
-      status:  'NN1',
-      depT:    leg.dt,
-      arrT:    leg.at,
-      eq:      leg.eq,
-      day:     getDayNum(leg),
-      dayOver: 0
+      al: leg.al,
+      fn: leg.fn,
+      cls: leg.cls,
+      date: dtStr,
+      dep: leg.org,
+      arr: leg.dst,
+      status: 'SS' + qty,
+      depT: leg.dt,
+      arrT: leg.at,
+      eq: leg.eq || '738',
+      day: dayNum,
+      dayOver: leg.dayOver || 0
     });
   });
 
-  // ── 6. Print full itinerary ───────────────────────────────────────────────
-  sbState.booked.forEach(function(s, i) {
-    var n = i + 1;
+  // Display full PNR itinerary matching live Sabre screenshot media_1790759569500.png
+  sbState.booked.forEach(function(s, idx) {
+    const n = idx + 1;
     if (s.al === 'ARNK') {
       sbPrint(' ' + n + '   ARNK');
       return;
     }
-    var fn4  = String(s.fn).padStart(4, ' ');
-    var deps = (s.dep + s.arr).padEnd(6);
-    var dc   = '/DC' + s.al;
-    var isNN = (s.status === 'NN1');
-    var line = ' ' + n + ' ' + s.al + fn4 + s.cls + ' ' + s.date + ' ' + s.day + ' ' + deps + ' ' + s.status + '  ' + s.depT + '  ' + s.arrT;
-    if (isNN) {
-      sbPrint(line);
-      sbPrint('                                                   /PENDING /E');
-    } else {
-      sbPrint(line + '  ' + dc + ' /E');
-    }
+    const fnStr = (s.al + String(s.fn).padStart(4, ' ') + s.cls).padEnd(8);
+    const dayOverTag = s.dayOver ? '   ' + s.dayOver : '';
+    sbPrint(' ' + n + ' ' + fnStr + ' ' + s.date + ' ' + s.day + ' ' + s.dep + s.arr + ' ' + s.status + '  ' + s.depT + '  ' + s.arrT + dayOverTag + '  /DC' + s.al + ' /E');
   });
 
-  // ── 7. Store fare quote ───────────────────────────────────────────────────
+  // Store fare quote in sbState
   if (typeof sbBuildFareQuote === 'function' && typeof sbGetFareForCarrier === 'function') {
-    var f = sbGetFareForCarrier(al);
-    f.total    = opt.fare;
-    f.baseBdt  = equivBdt;
-    f.tax      = totalBdt - equivBdt;
-    sbState.privateFare  = f;
-    sbState.pqPriced     = true;
-    sbState.fareQuote    = sbBuildFareQuote(f);
+    const f = sbGetFareForCarrier(opt.carrier || opt.legs[0].al);
+    f.total = opt.fare;
+    f.baseBdt = Math.round(opt.fare * 0.85);
+    f.tax = opt.fare - f.baseBdt;
+    sbState.privateFare = f;
+    sbState.pqPriced = true;
+    sbState.fareQuote = sbBuildFareQuote(f);
   }
+
+  if (typeof sbSyncSidePanel === 'function') sbSyncSidePanel();
 
   return true;
 }
+
 
 if (typeof window !== 'undefined') {
   window.cmdFareShopJR = cmdFareShopJR;
