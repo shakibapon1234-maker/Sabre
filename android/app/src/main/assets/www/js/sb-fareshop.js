@@ -443,7 +443,92 @@ function _sbGetDefaultBfmOptions(dateStr) {
   ];
 }
 
-/* ── Sell / Hold Segment from BFM / FareShop (JR03, JR01, 01J1, 02J3) ── */
+/* ── Sell / Hold Segment from BFM / FareShop (JR01, JR02, JR03) ──
+   Exact match with Live Sabre CERT Screenshot media_1790762269195.png */
+function _sbPrintFareShopTicketDetails(opt, legs, al, org, paxBreakdown) {
+  const FARE_BASIS = {
+    AI: 'SU3YXSDC',
+    BS: 'SBDSGO',
+    SQ: 'VU3XSDC',
+    MH: 'SHB6XSDC',
+    MU: 'VU3YXSDC',
+    TG: 'WU3YXSDC',
+    CZ: 'VU3YXSDC'
+  };
+
+  const baseBasis = FARE_BASIS[al] || ((legs[0].cls || 'S') + 'U3YXSDC');
+
+  paxBreakdown.forEach((pb, pIdx) => {
+    const pNum = String(pIdx + 1).padStart(2, '0');
+    const type = pb.type;
+    const isInf = (type === 'INF');
+    const isChd = (type === 'CNN' || type === 'CHD' || /^C\d{2}$/.test(type));
+
+    const fareBasis = isInf ? (baseBasis.slice(0, 5) + 'ESDC/IN') : (isChd ? (baseBasis + '/CH') : baseBasis);
+    const bag = isInf ? '10K' : '30K';
+
+    const singleFare = pb.single;
+    const usdFare = Math.round(singleFare / 123.65 * 100) / 100;
+    const equivBdt = Math.round(usdFare * 123.65);
+    const taxBD = 500;
+    const taxUT = isInf ? 0 : 4000;
+    const taxXT = Math.max(singleFare - equivBdt - taxBD - taxUT, 0);
+
+    if (pIdx > 0) sbPrint('');
+
+    sbPrint(`PSGR TYPE  ${type.padEnd(3)} - ${pNum}`);
+    sbPrint('     CXR RES DATE  FARE BASIS      NVB   NVA    BG');
+    sbPrint(' ' + org);
+
+    legs.forEach((leg, i) => {
+      const isLast = (i === legs.length - 1);
+      const prefix = isLast ? ' ' : 'X';
+      const city = leg.dst;
+      const date = leg.dtStr || sbGetSabreDate();
+      const cls = leg.cls || 'S';
+      sbPrint(`${prefix}${city.padEnd(3)} ${leg.al}  ${cls}   ${date} ${fareBasis.padEnd(15)} ${date} ${date} ${bag}`);
+    });
+
+    const usdStr = String(usdFare.toFixed(2)).padStart(8);
+    const eqvStr = String(equivBdt).padStart(7);
+    sbPrint(`FARE  USD   ${usdStr} EQUIV BDT   ${eqvStr}`);
+
+    if (taxUT > 0) {
+      sbPrint(`TAX   BDT     ${taxBD}BD BDT   ${taxUT}UT BDT   ${String(taxXT).padStart(5)}XT`);
+    } else {
+      sbPrint(`TAX   BDT     ${taxBD}BD BDT   ${String(taxXT).padStart(5)}XT`);
+    }
+
+    sbPrint(`TOTAL BDT    ${singleFare}`);
+    sbPrint(`${type}-${pNum}  ${fareBasis}`);
+
+    let routeLine = ' ' + org;
+    legs.forEach((leg, i) => {
+      if (i < legs.length - 1) {
+        routeLine += ' ' + leg.al + ' X/' + leg.dst;
+      } else {
+        routeLine += ' ' + leg.al + ' ' + leg.dst;
+      }
+    });
+    routeLine += usdFare.toFixed(2) + 'NUC' + usdFare.toFixed(2) + 'END ROE1.00';
+    sbPrint(routeLine);
+
+    if (isInf) {
+      sbPrint('XT BDT3000W BDT447E5 BDT154P8');
+    } else {
+      sbPrint('XT BDT25000W BDT447E5 BDT414YR BDT6183YQ BDT1237P8 BDT1237P7');
+    }
+
+    const startSeg = sbState.booked.length - legs.length + 1;
+    const endSeg = sbState.booked.length;
+    const segRef = legs.length > 1 ? `${startSeg}/${endSeg}` : String(startSeg);
+    sbPrint(`ENDOS*SEG${segRef}*NON-END/CHANGE/CANCELLATION/NO-SHOW/PENALTY MAY`);
+    sbPrint('ENDOS*APPLY/AS PER FARE RULES');
+    sbPrint('RATE USED 1USD-123.65BDT');
+    sbPrint(`ATTN*VALIDATING CARRIER - ${al}`);
+  });
+}
+
 function sbSellBfmOption(optIndex, qty) {
   if (qty === undefined) qty = 1;
   let options = window._sbBfmOptions || (typeof sbState !== 'undefined' ? sbState._bfmOptions : null);
@@ -465,17 +550,19 @@ function sbSellBfmOption(optIndex, qty) {
   if (typeof sbState === 'undefined') return false;
 
   const MON = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+  const legs = opt.legs;
+  const al = opt.carrier || legs[0].al;
+  const org = legs[0].org;
 
-  sbPrint('BOOKING STATUS: SEGMENTS ADDED TO PNR', 'sb-booking-status');
-
-  opt.legs.forEach(leg => {
+  // Add segments to sbState.booked
+  legs.forEach(leg => {
     const dtStr = leg.dtStr || (leg.d ? (String(leg.d.getDate()).padStart(2,'0') + MON[leg.d.getMonth()]) : sbGetSabreDate());
     const dayNum = leg.dayNum || leg.dayLet || (leg.d ? (leg.d.getDay() === 0 ? 1 : leg.d.getDay() + 1) : 1);
 
     sbState.booked.push({
       al: leg.al,
       fn: leg.fn,
-      cls: leg.cls,
+      cls: leg.cls || 'S',
       date: dtStr,
       dep: leg.org,
       arr: leg.dst,
@@ -488,44 +575,37 @@ function sbSellBfmOption(optIndex, qty) {
     });
   });
 
-  // Display full PNR itinerary matching live Sabre screenshot media_1790759569500.png
-  sbState.booked.forEach(function(s, idx) {
-    const n = idx + 1;
-    if (s.al === 'ARNK') {
-      sbPrint(' ' + n + '   ARNK');
-      return;
-    }
-    const fnStr = (s.al + String(s.fn).padStart(4, ' ') + s.cls).padEnd(8);
-    const dayOverTag = s.dayOver ? '   ' + s.dayOver : '';
-    sbPrint(' ' + n + ' ' + fnStr + ' ' + s.date + ' ' + s.day + ' ' + s.dep + s.arr + ' ' + s.status + '  ' + s.depT + '  ' + s.arrT + dayOverTag + '  /DC' + s.al + ' /E');
-  });
+  // Determine passenger breakdown
+  const paxBreakdown = opt.paxBreakdown || [{ count: qty, type: 'ADT', single: opt.fare, lineTotal: opt.fare * qty }];
+
+  // Output the exact Sabre ticket details from Screenshot media_1790762269195.png
+  _sbPrintFareShopTicketDetails(opt, legs, al, org, paxBreakdown);
 
   // Store fare quote in sbState
   if (typeof sbBuildFareQuote === 'function' && typeof sbGetFareForCarrier === 'function') {
-    const f = sbGetFareForCarrier(opt.carrier || opt.legs[0].al);
-    const finalTotal = opt.grandTotal || opt.fare;
+    const f = sbGetFareForCarrier(al);
+    const finalTotal = opt.grandTotal || (opt.fare * qty);
     f.total = finalTotal;
     f.baseBdt = Math.round(finalTotal * 0.85);
     f.tax = finalTotal - f.baseBdt;
     sbState.privateFare = f;
     sbState.pqPriced = true;
     sbState.fareQuote = sbBuildFareQuote(f);
-    if (opt.paxBreakdown) {
-      sbState.fareQuote.breakdown = opt.paxBreakdown.map((pb, i) => ({
-        index: i + 1,
-        type: pb.type,
-        count: pb.count,
-        base: Math.round(pb.lineTotal * 0.85),
-        tax: pb.lineTotal - Math.round(pb.lineTotal * 0.85),
-        total: pb.lineTotal
-      }));
-    }
+    sbState.fareQuote.breakdown = paxBreakdown.map((pb, i) => ({
+      index: i + 1,
+      type: pb.type,
+      count: pb.count,
+      base: Math.round(pb.lineTotal * 0.85),
+      tax: pb.lineTotal - Math.round(pb.lineTotal * 0.85),
+      total: pb.lineTotal
+    }));
   }
 
   if (typeof sbSyncSidePanel === 'function') sbSyncSidePanel();
 
   return true;
 }
+
 
 
 if (typeof window !== 'undefined') {
