@@ -814,8 +814,11 @@
   <!-- Menu bar -->
   <div class="menu-bar">
     <span>File</span><span>Edit</span><span>View</span><span>Tools</span>
-    <span>Favorites</span><span>Window</span><span>Help</span>
-    <span>Contact Us</span><span>Admin</span>
+    <span>Favorites</span><span>Window</span>
+    <span onclick="sbOpenCommandHelper()" title="Command Reference">Help</span>
+    <span onclick="sbOpenAboutModal()" style="font-weight: 600; color: #c8102e;" title="About Wings Fly Aviation Academy">About Us</span>
+    <span onclick="sbOpenAboutModal()" title="Helpline & Contact">Contact Us</span>
+    <span onclick="window.open('Security_Admin.html','_blank')" title="Supervisor Dashboard">Admin</span>
   </div>
 
   <!-- Sabre brand tab -->
@@ -991,6 +994,39 @@
       </div>
       <div class="sb-help-body" id="sbHelpList"></div>
       <div class="sb-help-foot">যেকোনো লাইনে ক্লিক করলে সেটা কমান্ড ইনপুটে বসে যাবে</div>
+    </div>
+  </div>
+
+  <!-- About Us modal -->
+  <div class="sb-help-overlay" id="sbAboutModal" onclick="if(event.target===this) sbCloseAboutModal()">
+    <div class="sb-help-modal" style="width: 500px;">
+      <div class="sb-help-head" style="background: linear-gradient(135deg, #180306, #3e0b12); border-bottom: 2px solid #c8102e;">
+        <span style="display:flex; align-items:center; gap:8px;">
+          <span style="color:#ff3355; font-size:18px;">✈</span>
+          <span>About Us — Sabre Training Simulator</span>
+        </span>
+        <span class="x" onclick="sbCloseAboutModal()">✕</span>
+      </div>
+      <div class="sb-help-body" style="padding: 24px 26px; color: var(--text-light); line-height: 1.6;">
+        <div style="font-size: 18px; font-weight: 800; color: #ffffff; margin-bottom: 4px;">Wings Fly Aviation Academy</div>
+        <div style="font-size: 13px; color: #ffccd3; margin-bottom: 18px;">Sabre GDS Training Simulator (Agency Workspace CERT)</div>
+        
+        <div style="background: rgba(200, 16, 46, 0.12); border: 1px solid rgba(200, 16, 46, 0.35); border-radius: 10px; padding: 16px 18px; margin-bottom: 18px;">
+          <div style="font-size: 13.5px; color: #ffffff; margin-bottom: 6px;">📞 <strong>হেল্পলাইন ও কন্টাক্ট সাপোর্ট:</strong></div>
+          <div style="font-size: 19px; font-weight: 800; color: #ff4763; letter-spacing: 0.5px;">
+            01757208244 <span style="font-size: 15px; font-weight: 700; color: #ffffff;">(Shakib)</span>
+          </div>
+          <div style="font-size: 12.5px; color: #cbd5e1; margin-top: 6px;">ট্রেনিং অ্যাকাউন্ট অ্যাক্টিভেশন, ডিভাইস অনুমোদন ও কারিগরি সহায়তার জন্য সরাসরি যোগাযোগ করুন।</div>
+        </div>
+
+        <div style="font-size: 12px; color: var(--text-dim); line-height: 1.55;">
+          এটি একটি স্বাধীন এডুকেশনাল সিমুলেটর। বাস্তব Sabre Red 360-এর এনকোড/ডিকোড, এভেইলিবিলিটি, সেগমেন্ট বুকিং, PNR ক্রিয়েশন ও টিকেটিং প্রশিক্ষণের জন্য প্রস্তুতকৃত।
+        </div>
+      </div>
+      <div class="sb-help-foot" style="display: flex; justify-content: space-between; align-items: center; padding: 12px 20px;">
+        <span style="color: var(--text-dim); font-size: 12px;">Instructor & Developer: <strong style="color: #ffffff;">Shakib</strong></span>
+        <button type="button" onclick="sbCloseAboutModal()" style="padding: 6px 18px; border: 0; border-radius: 5px; background: linear-gradient(180deg, #d81635 0%, #b80f27 100%); color: #fff; font-weight: 700; cursor: pointer;">Close</button>
+      </div>
     </div>
   </div>
 

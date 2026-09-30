@@ -1,7 +1,7 @@
 /* =========================================================================
    SABRE TRAINING SIMULATOR — AVAILABILITY ENGINE
    Independent educational tool — no affiliation with Sabre Corporation.
-   Builds a Sabre-style 1N/1A display for a queried city pair + date,
+   Builds a Sabre-style 1 availability display for a queried city pair + date,
    mixing direct options with realistic 1-stop connections when the
    origin/destination regions don't share a direct carrier.
    ========================================================================= */
@@ -89,34 +89,53 @@ function sbGenerateAvailability(org, dst, date) {
   const rnd = sbRand(seed);
   const dayOfWeek = String(1 + Math.floor(rnd() * 7));
 
-  const sameRegion = oInfo.region === dInfo.region;
-  const oneIsBD = oInfo.region === "BD" || dInfo.region === "BD";
-  const regionalPair = oneIsBD && ["BD", "SASIA", "SEASIA", "MENA"].includes(
-    oInfo.region === "BD" ? dInfo.region : oInfo.region
-  );
-  const directPossible = sameRegion || regionalPair;
+  const directCarriers = SB_DIRECT_ROUTE_CARRIERS[`${org}-${dst}`] || [];
+  const directPossible = directCarriers.length > 0;
 
   const options = [];
 
-  // Direct option(s)
+  // A real availability display offers a useful board of choices, rather
+  // than a single result.  Keep ten direct options for routings that have
+  // direct service (such as DAC-DXB); each retains a unique schedule/carrier.
   if (directPossible) {
-    const nDirect = 1 + Math.floor(rnd() * 2); // 1-2 direct services
+    const nDirect = 6;
     for (let i = 0; i < nDirect; i++) {
-      const al = sbPickCarrier(rnd, oInfo.region, dInfo.region);
+      const al = directCarriers[i % directCarriers.length];
       const elapsed = 90 + Math.floor(rnd() * 420); // 1.5h - 8.5h
       options.push({ legs: [sbBuildLeg(rnd, al, org, dst, 300 + i * 240, elapsed, dayOfWeek)] });
     }
   }
 
-  // Connecting option via the region's usual hub (shown even if a direct
-  // service exists, since students need to practice reading connections)
-  const hub = SB_HUB_BY_REGION[dInfo.region] || "DXB";
+  // Use a connection only when the routing has no direct service.  This
+  // prevents a DAC-DXB display from incorrectly showing a DXB connection.
+  // Even a route with non-stop service has connecting alternatives in a GDS
+  // display.  Choose a sensible alternate hub so it is never the destination.
+  const transitHubs = {
+    "DAC-DXB": "DOH", "DXB-DAC": "DOH", "DAC-BKK": "KUL", "BKK-DAC": "KUL",
+    "DAC-KUL": "SIN", "KUL-DAC": "SIN", "DAC-SIN": "KUL", "SIN-DAC": "KUL",
+    "DAC-DOH": "DXB", "DOH-DAC": "DXB", "DAC-JED": "DXB", "JED-DAC": "DXB",
+    "DAC-DEL": "DXB", "DEL-DAC": "DXB", "DAC-CCU": "DEL", "CCU-DAC": "DEL",
+    "DAC-CMB": "KUL", "CMB-DAC": "KUL", "DAC-KTM": "DEL", "KTM-DAC": "DEL"
+  };
+  const hub = transitHubs[`${org}-${dst}`] || SB_HUB_BY_REGION[dInfo.region] || "DXB";
   if (hub !== org && hub !== dst) {
     const al1 = sbPickCarrier(rnd, oInfo.region, "MENA");
     const al2 = sbPickCarrier(rnd, "MENA", dInfo.region);
     const leg1 = sbBuildLeg(rnd, al1, org, hub, 120 + Math.floor(rnd() * 300), 200 + Math.floor(rnd() * 200), dayOfWeek);
     const groundMin = 90 + Math.floor(rnd() * 150); // connection time at hub
     const leg2Dep = sbAddMinutes(leg1.arrT, groundMin);
+    const leg2 = sbBuildLeg(rnd, al2, hub, dst, parseInt(leg2Dep.time.slice(0, 2), 10) * 60 + parseInt(leg2Dep.time.slice(2), 10), 90 + Math.floor(rnd() * 420), dayOfWeek);
+    leg2.depT = leg2Dep.time;
+    options.push({ legs: [leg1, leg2] });
+  }
+
+  // Long-haul routes are connection-only, so add enough alternatives to
+  // maintain the same ten-choice training board.
+  while (options.length < 10 && hub !== org && hub !== dst) {
+    const al1 = sbPickCarrier(rnd, oInfo.region, "MENA");
+    const al2 = sbPickCarrier(rnd, "MENA", dInfo.region);
+    const leg1 = sbBuildLeg(rnd, al1, org, hub, 120 + Math.floor(rnd() * 900), 200 + Math.floor(rnd() * 200), dayOfWeek);
+    const leg2Dep = sbAddMinutes(leg1.arrT, 90 + Math.floor(rnd() * 150));
     const leg2 = sbBuildLeg(rnd, al2, hub, dst, parseInt(leg2Dep.time.slice(0, 2), 10) * 60 + parseInt(leg2Dep.time.slice(2), 10), 90 + Math.floor(rnd() * 420), dayOfWeek);
     leg2.depT = leg2Dep.time;
     options.push({ legs: [leg1, leg2] });

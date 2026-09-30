@@ -11,6 +11,9 @@
   let heartbeat = null;
   let failures = 0;
 
+  const SVG_EYE_OPEN = `<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>`;
+  const SVG_EYE_CLOSED = `<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>`;
+
   const headers = token => ({
     apikey: KEY,
     Authorization: `Bearer ${token || KEY}`,
@@ -34,6 +37,18 @@
     return navigator.userAgent.includes('Electron') ? 'electron' : (/Android/i.test(navigator.userAgent) ? 'android' : 'web');
   }
 
+  function setLoginLoading(isLoading) {
+    const overlay = $('loginLoading');
+    const btn = $('sbSignIn');
+    if (overlay) overlay.hidden = !isLoading;
+    if (btn) {
+      btn.disabled = isLoading;
+      btn.textContent = isLoading ? 'Signing in…' : 'Sign in';
+      btn.style.opacity = isLoading ? '0.75' : '1';
+      btn.style.cursor = isLoading ? 'not-allowed' : 'pointer';
+    }
+  }
+
   function render() {
     if ($('sbLoginShell')) return;
 
@@ -54,7 +69,7 @@
   z-index: 9999;
   display: grid;
   place-items: center;
-  background: linear-gradient(135deg, #111a27, #253b55);
+  background: radial-gradient(circle at 50% 32%, rgba(200, 16, 46, 0.32) 0%, transparent 68%), linear-gradient(145deg, #130305 0%, #2e070c 45%, #5a0f18 100%);
   font-family: Segoe UI, Arial, sans-serif;
   color: #edf3f8;
 }
@@ -63,79 +78,202 @@
 }
 #sbLoginShell .card {
   width: min(420px, 92vw);
-  padding: 34px;
-  border-radius: 12px;
-  background: #fff;
+  padding: 32px 34px 28px;
+  border-radius: 14px;
+  background: #ffffff;
   color: #1d2733;
-  box-shadow: 0 20px 55px #0008;
+  box-shadow: 0 24px 65px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(200, 16, 46, 0.12);
 }
 #sbLoginShell h1 {
   margin: 0 0 6px;
-  color: #b6432f;
+  color: #c8102e;
+  font-weight: 800;
+  letter-spacing: -0.3px;
 }
 #sbLoginShell p {
   color: #56616f;
+  margin: 0 0 4px;
 }
 #sbLoginShell label {
   display: block;
   margin: 16px 0 6px;
   font-weight: 600;
+  color: #2b3340;
 }
 #sbLoginShell input {
   width: 100%;
-  padding: 11px;
-  border: 1px solid #b8c2cd;
-  border-radius: 5px;
+  padding: 11px 12px;
+  border: 1px solid #c9d1da;
+  border-radius: 6px;
   font-size: 15px;
   box-sizing: border-box;
+  transition: border-color 0.18s, box-shadow 0.18s;
+}
+#sbLoginShell input:focus {
+  outline: none;
+  border-color: #c8102e;
+  box-shadow: 0 0 0 3px rgba(200, 16, 46, 0.16);
 }
 #sbLoginShell .password-wrap {
   position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
 }
 #sbLoginShell .password-wrap input {
-  padding-right: 48px;
+  padding-right: 44px;
 }
 #sbLoginShell .eye {
   position: absolute;
   right: 7px;
-  top: 7px;
-  width: 34px;
-  height: 34px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 32px;
+  height: 32px;
   margin: 0;
   padding: 0;
   border: 0;
-  border-radius: 4px;
+  border-radius: 5px;
   background: transparent;
-  color: #536171;
-  font-size: 18px;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
+  transition: background 0.15s, color 0.15s;
 }
 #sbLoginShell .eye:hover {
-  background: #eaf0f4;
+  background: #fdebee;
+  color: #c8102e;
 }
 #sbLoginShell .submit {
   width: 100%;
-  margin-top: 20px;
+  margin-top: 22px;
   padding: 12px;
   border: 0;
-  border-radius: 5px;
-  background: #0d817e;
+  border-radius: 6px;
+  background: linear-gradient(180deg, #d81635 0%, #b80f27 100%);
   color: #fff;
   font-weight: 700;
+  font-size: 15px;
   cursor: pointer;
+  box-shadow: 0 4px 14px rgba(184, 15, 39, 0.35);
+  transition: background 0.18s, box-shadow 0.18s, transform 0.08s;
+}
+#sbLoginShell .submit:hover {
+  background: linear-gradient(180deg, #e41a3a 0%, #c4122c 100%);
+  box-shadow: 0 6px 20px rgba(184, 15, 39, 0.45);
+}
+#sbLoginShell .submit:active {
+  transform: translateY(1px);
 }
 #sbLoginShell .err {
   min-height: 20px;
   color: #b42318;
   margin: 12px 0 0;
+  font-weight: 500;
+  font-size: 13.5px;
 }
 #sbLoginShell code {
   display: block;
   font-size: 11px;
   word-break: break-all;
-  background: #edf2f6;
-  padding: 7px;
-  border-radius: 4px;
+  background: #fdf2f4;
+  border: 1px solid #f6d4d9;
+  color: #6a1723;
+  padding: 8px 10px;
+  border-radius: 5px;
+  margin-top: 4px;
+}
+#sbLoginShell .sb-login-helpline {
+  margin-top: 18px;
+  padding-top: 13px;
+  border-top: 1px dashed #f2cad0;
+  text-align: center;
+  font-size: 13px;
+  color: #7b1d28;
+}
+#sbLoginShell .sb-login-helpline strong {
+  color: #c8102e;
+  letter-spacing: 0.5px;
+  font-size: 14px;
+}
+
+/* --- Animated Flying Plane Progress Overlay (Sabre Red) --- */
+.login-loading {
+  position: fixed;
+  inset: 0;
+  z-index: 20010;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(18, 3, 5, 0.82);
+  backdrop-filter: blur(4px);
+}
+.login-loading[hidden] {
+  display: none !important;
+}
+.login-loading-card {
+  width: min(370px, 92vw);
+  padding: 30px 28px 26px;
+  display: grid;
+  justify-items: center;
+  gap: 12px;
+  border: 1px solid rgba(255, 175, 185, 0.35);
+  border-radius: 16px;
+  background: linear-gradient(145deg, #a81327, #48080f);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55);
+  color: #ffffff;
+  text-align: center;
+}
+.login-loading-card strong {
+  font-size: 20px;
+  letter-spacing: 0.1px;
+}
+.login-loading-card > span {
+  color: #ffccd3;
+  font-size: 13.5px;
+}
+.login-flight-track {
+  position: relative;
+  width: 230px;
+  height: 42px;
+  overflow: hidden;
+  border-bottom: 2px dashed rgba(255, 200, 210, 0.75);
+}
+.login-flight-plane {
+  position: absolute;
+  top: 2px;
+  left: -32px;
+  color: #ffffff;
+  font-size: 30px;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.45));
+  animation: login-flight 1.8s linear infinite;
+}
+.login-spinner {
+  width: 28px;
+  height: 28px;
+  border: 3px solid rgba(255, 255, 255, 0.28);
+  border-top-color: #ffffff;
+  border-radius: 50%;
+  animation: login-spin 0.75s linear infinite;
+}
+@keyframes login-flight {
+  from {
+    transform: translateX(0) translateY(6px) rotate(-8deg);
+  }
+  45% {
+    transform: translateX(115px) translateY(0) rotate(-8deg);
+  }
+  to {
+    transform: translateX(275px) translateY(-9px) rotate(-8deg);
+  }
+}
+@keyframes login-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 </style>
 <div class="card">
@@ -148,7 +286,7 @@
     <label>Password
       <span class="password-wrap">
         <input id="sbLoginPassword" type="password" autocomplete="current-password" required>
-        <button class="eye" id="sbPasswordEye" type="button" aria-label="Show password">◉</button>
+        <button class="eye" id="sbPasswordEye" type="button" aria-label="Show password">${SVG_EYE_OPEN}</button>
       </span>
     </label>
     <button class="submit" id="sbSignIn" type="button">Sign in</button>
@@ -156,6 +294,18 @@
   <p class="err" id="sbLoginError"></p>
   <p>Device ID</p>
   <code id="sbDeviceId"></code>
+  <div class="sb-login-helpline">
+    <span>📞 হেল্পলাইন: <strong>01757208244 (Shakib)</strong></span>
+  </div>
+</div>
+
+<div class="login-loading" id="loginLoading" hidden role="status" aria-live="assertive" aria-label="Signing you in">
+  <div class="login-loading-card">
+    <div class="login-flight-track"><span class="login-flight-plane">&#9992;</span></div>
+    <div class="login-spinner" aria-hidden="true"></div>
+    <strong>Signing you in…</strong>
+    <span>Verifying your account and device.</span>
+  </div>
 </div>`;
 
     document.body.appendChild(shell);
@@ -165,10 +315,10 @@
     $('sbSignIn').addEventListener('click', signIn);
     $('sbPasswordEye').addEventListener('click', () => {
       const input = $('sbLoginPassword');
-      const visible = input.type === 'text';
-      input.type = visible ? 'password' : 'text';
-      $('sbPasswordEye').textContent = visible ? '◉' : '◉̸';
-      $('sbPasswordEye').setAttribute('aria-label', visible ? 'Show password' : 'Hide password');
+      const isPassword = input.type === 'password';
+      input.type = isPassword ? 'text' : 'password';
+      $('sbPasswordEye').innerHTML = isPassword ? SVG_EYE_CLOSED : SVG_EYE_OPEN;
+      $('sbPasswordEye').setAttribute('aria-label', isPassword ? 'Hide password' : 'Show password');
     });
   }
 
@@ -204,6 +354,7 @@
     session = null;
     localStorage.removeItem(SESSION_KEY);
     sessionStorage.removeItem(SESSION_KEY);
+    setLoginLoading(false);
     if ($('sbLoginError')) {
       $('sbLoginError').textContent = message || 'Internet connection is required to use this training application.';
     }
@@ -253,6 +404,7 @@
     const password = $('sbLoginPassword')?.value || '';
     if ($('sbLoginError')) $('sbLoginError').textContent = '';
 
+    setLoginLoading(true);
     try {
       const login = await call('login-with-device', {
         username,
@@ -278,6 +430,8 @@
       startHeartbeat();
     } catch (e) {
       if ($('sbLoginError')) $('sbLoginError').textContent = e.message;
+    } finally {
+      setLoginLoading(false);
     }
   }
 

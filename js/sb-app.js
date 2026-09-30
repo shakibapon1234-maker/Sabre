@@ -176,3 +176,15 @@ window.addEventListener('keydown', e => {
   if (e.key === 'ArrowUp') { e.preventDefault(); sbRecallHistory(-1); }
   if (e.key === 'ArrowDown') { e.preventDefault(); sbRecallHistory(1); }
 }, true);
+
+/* --- About Us Modal --- */
+function sbOpenAboutModal() {
+  const m = document.getElementById('sbAboutModal');
+  if (m) m.classList.add('open');
+}
+function sbCloseAboutModal() {
+  const m = document.getElementById('sbAboutModal');
+  if (m) m.classList.remove('open');
+}
+window.sbOpenAboutModal = sbOpenAboutModal;
+window.sbCloseAboutModal = sbCloseAboutModal;

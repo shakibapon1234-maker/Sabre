@@ -1872,6 +1872,11 @@ function sbParse(raw) {
   if (/^\*[A-Z0-9]{5,6}$/.test(upper)) return cmdRetrieve(upper);
 
   if (/^HELP$|^\?$/.test(upper)) return cmdHelp();
+  if (/^ABOUT$|^CONTACT$|^HELPLINE$/i.test(upper)) {
+    if (typeof sbOpenAboutModal === 'function') sbOpenAboutModal();
+    sbPrint('HELPLINE: 01757208244 (SHAKIB) — WINGS FLY AVIATION ACADEMY');
+    return;
+  }
 
   sbWarn(`FORMAT INVALID - ${upper} NOT RECOGNIZED — TYPE HELP FOR COMMAND LIST`);
 }
