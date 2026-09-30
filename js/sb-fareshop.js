@@ -202,12 +202,19 @@ function sbHandleJrSubmit() {
   // Collect all passenger inputs from the 4 boxes: jrPsgr1, jrPsgr2, jrPsgr3, jrPsgr4
   const psgrList = [];
   ['jrPsgr1', 'jrPsgr2', 'jrPsgr3', 'jrPsgr4'].forEach(id => {
-    const val = (document.getElementById(id)?.value || '').trim().toUpperCase();
+    let val = (document.getElementById(id)?.value || '').trim().toUpperCase();
     if (val) {
+      // Normalize common typo: capital 'I' or 'L' typed instead of digit '1' at the start (e.g. ICHD -> 1CHD)
+      if (/^[IL]([A-Z0-9]+)$/.test(val) && !val.startsWith('INF')) {
+        val = '1' + val.slice(1);
+      }
       const m = val.match(/^(\d+)?([A-Z0-9]+)$/);
       if (m) {
         const count = m[1] ? parseInt(m[1], 10) : 1;
-        const type = m[2];
+        let type = m[2];
+        if (type === 'ICHD') type = 'CHD';
+        if (type === 'ICNN') type = 'CNN';
+        if (type === 'IADT') type = 'ADT';
         psgrList.push({ raw: val, count, type });
       }
     }
@@ -373,9 +380,10 @@ function _sbRenderBfmResultsInContainer(container, org, dst, date1, dst2, date2,
           single = opt.fare;
           displayType = 'ADT';
         }
-      } else if (t === 'CNN' || t === 'CHD') {
+      } else if (t === 'CNN' || t === 'CHD' || t === 'ICHD' || t === 'ICNN') {
         // Child is 75% of adult fare
         single = Math.round(opt.fare * 0.75);
+        displayType = (t === 'CHD' || t === 'ICHD') ? 'CHD' : 'CNN';
       } else {
         single = opt.fare;
         displayType = 'ADT';
@@ -474,7 +482,7 @@ function _sbPrintFareShopTicketDetails(opt, legs, al, org, paxBreakdown) {
     const pNum = String(pIdx + 1).padStart(2, '0');
     const type = pb.type;
     const isInf = (type === 'INF');
-    const isChd = (type === 'CNN' || type === 'CHD' || /^C\d{2}$/.test(type));
+    const isChd = (type === 'CNN' || type === 'CHD' || type === 'ICHD' || type === 'ICNN' || /^C\d{2}$/.test(type));
 
     const fareBasis = isInf ? (baseBasis.slice(0, 5) + 'ESDC/IN') : (isChd ? (baseBasis + '/CH') : baseBasis);
     const bag = isInf ? '10K' : '30K';
