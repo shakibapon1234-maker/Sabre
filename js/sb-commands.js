@@ -368,6 +368,28 @@ function cmdAvailability(raw) {
    • 0AA         → Add ARNK segment
    • ,3          → Increase party size to 3
 --------------------------------------------------------------------- */
+/* ---------------------------------------------------------------------
+   Sell from FareShop / Bargain Finder (BFM / JR / WPNI) — Sabre Standard:
+   • 0J1   → Sell 1 seat from ITINERARY OPTION 1
+   • 01J1  → Sell 1 seat from ITINERARY OPTION 1
+   • 02J1  → Sell 2 seats from ITINERARY OPTION 1
+   • 0J2   → Sell 1 seat from ITINERARY OPTION 2
+--------------------------------------------------------------------- */
+function cmdSellBfm(raw) {
+  const m = raw.match(/^0(\d+)?J(\d+)$/i);
+  if (!m) {
+    sbWarn('FORMAT: 0J<OPTION> or 0<SEATS>J<OPTION>  e.g. 0J1 or 01J1');
+    return false;
+  }
+  const qty = m[1] ? parseInt(m[1], 10) : 1;
+  const optNum = parseInt(m[2], 10);
+  if (typeof sbSellBfmOption === 'function') {
+    return sbSellBfmOption(optNum, qty);
+  }
+  sbWarn('FARESHOP NOT ACTIVE. RUN JR FIRST');
+  return false;
+}
+
 function cmdSell(raw, quantity = 1) {
   const m = raw.match(/^0(\d+)?([A-Z])(\d+)$/);
   if (!m) { sbWarn('FORMAT: 0<CLASS><LINE>  e.g. 0Y1  or 01Y1'); return false; }

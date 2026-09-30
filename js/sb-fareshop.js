@@ -309,15 +309,23 @@ function _sbRenderBfmResultsInContainer(container, org, dst, date1, dst2, date2,
     }
   ];
 
+    // Store options in global & state so 0J1 / 01J1 sell command works
+  window._sbBfmOptions = sampleOptions;
+  if (typeof sbState !== 'undefined') {
+    sbState._bfmOptions = sampleOptions;
+  }
+
   let outHtml = '';
 
   sampleOptions.forEach((opt, idx) => {
-    outHtml += `<div class="jr-opt-block" style="margin-bottom: 16px;">`;
-    outHtml += `<div class="jr-opt-title" style="font-weight: 700; color: #ffffff; margin-bottom: 3px; font-size: 14px;">ITINERARY OPTION ${idx + 1}</div>`;
+    outHtml += `<div class="jr-opt-block" onclick="sbSellBfmOption(${idx + 1}, ${paxCount})" style="margin-bottom: 16px; cursor: pointer;" title="Click to hold/sell Option ${idx + 1} (Command: 0J${idx + 1} or 0${paxCount}J${idx + 1})">`;
+    outHtml += `<div class="jr-opt-title" style="font-weight: 700; color: #ffffff; margin-bottom: 3px; font-size: 14px;">ITINERARY OPTION ${idx + 1} <span style="font-size: 11px; font-weight: normal; color: #0d9488; margin-left: 10px;">[0J${idx + 1} TO HOLD]</span></div>`;
 
     opt.legs.forEach(leg => {
       const dtStr = String(leg.d.getDate()).padStart(2, '0') + months[leg.d.getMonth()];
       const dayLet = dayLetters[leg.d.getDay()];
+      leg.dtStr = dtStr;
+      leg.dayLet = dayLet;
       outHtml += `<div class="jr-flight-line" style="font-family: inherit; font-size: 13.5px; line-height: 1.5; color: #cfd6e0; white-space: pre;">` +
         ` ${leg.seg} ${leg.al.padEnd(3)} ${leg.fn.padStart(5)}  ${leg.cls} ${dtStr} ${dayLet}  ${leg.org.padEnd(4)} ${leg.dst.padEnd(4)} ${leg.dt}  ${leg.at} ${leg.eq} ${leg.stops} /E` +
         `</div>`;
@@ -338,8 +346,56 @@ function _sbRenderBfmResultsInContainer(container, org, dst, date1, dst2, date2,
   container.innerHTML = outHtml;
 }
 
+/* ── Sell / Hold Segment from BFM / FareShop (0J1, 01J1, 02J1) ── */
+function sbSellBfmOption(optIndex, qty = 1) {
+  const options = window._sbBfmOptions || (typeof sbState !== 'undefined' ? sbState._bfmOptions : null);
+  if (!options || !options[optIndex - 1]) {
+    if (typeof sbWarn === 'function') sbWarn(`NO FARESHOP OPTION ${optIndex} FOUND. RUN JR FIRST`);
+    return false;
+  }
+
+  const opt = options[optIndex - 1];
+  if (typeof sbState === 'undefined') return false;
+
+  sbPrint('BOOKING STATUS: SEGMENTS ADDED TO PNR', 'sb-booking-status');
+
+  opt.legs.forEach(leg => {
+    sbState.booked.push({
+      al: leg.al,
+      fn: leg.fn,
+      cls: leg.cls,
+      date: leg.dtStr,
+      dep: leg.org,
+      arr: leg.dst,
+      status: `SS${qty}`,
+      depT: leg.dt,
+      arrT: leg.at,
+      eq: leg.eq,
+      day: leg.dayLet,
+      dayOver: 0
+    });
+
+    const s = sbState.booked[sbState.booked.length - 1];
+    sbPrint(` ${sbState.booked.length} ${s.al.padEnd(5)} ${s.fn.padEnd(4)} ${s.cls.padEnd(2)} ${s.date} ${s.day.padEnd(3)}  ${s.dep.padEnd(4)} ${s.arr.padEnd(4)} ${s.status.padEnd(4)} ${s.depT}  ${s.arrT}`);
+  });
+
+  // Store fare quote in sbState
+  if (typeof sbBuildFareQuote === 'function' && typeof sbGetFareForCarrier === 'function') {
+    const f = sbGetFareForCarrier(opt.carrier || 'AI');
+    f.total = opt.fare;
+    f.baseBdt = Math.round(opt.fare * 0.85);
+    f.tax = opt.fare - f.baseBdt;
+    sbState.privateFare = f;
+    sbState.pqPriced = true;
+    sbState.fareQuote = sbBuildFareQuote(f);
+  }
+
+  return true;
+}
+
 if (typeof window !== 'undefined') {
   window.cmdFareShopJR = cmdFareShopJR;
   window.sbHandleJrSubmit = sbHandleJrSubmit;
   window.sbCloseJrMask = sbCloseJrMask;
+  window.sbSellBfmOption = sbSellBfmOption;
 }
