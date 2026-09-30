@@ -85,6 +85,21 @@ function openTicketModal(pax, tktNo, fare, flight, depDate, dest, origTkt, itine
   if(document.getElementById('tktModalDest')) document.getElementById('tktModalDest').textContent = dest || '—';
 
   renderTicketItinerary(itinerary);
+  const card = document.getElementById('ticketModalCard');
+  if(card){
+    card.scrollTop = 0;
+    card.classList.remove('hide-fare-on-print', 'hide-fare-active');
+  }
+  const hideFare = document.getElementById('hideFareCheckbox') || document.getElementById('tktHideFare');
+  if(hideFare){
+    hideFare.checked = false;
+    hideFare.onchange = function(){
+      if(card){
+        card.classList.toggle('hide-fare-active', this.checked);
+        card.classList.toggle('hide-fare-on-print', this.checked);
+      }
+    };
+  }
   const bd = document.getElementById('ticketModalBackdrop');
   if(bd) bd.classList.add('show');
 }
