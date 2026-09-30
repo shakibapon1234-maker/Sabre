@@ -184,6 +184,11 @@ function sbPfUpdateFkeyBar() {
     shown++;
   }
 
+  // The command bar already exposes PF Keys.  Keep this strip out of the
+  // way until the user has configured at least one shortcut.
+  bar.hidden = shown === 0;
+  if (shown === 0) return;
+
   const more = document.createElement('div');
   more.className = 'fkey-more';
   more.textContent = '⋮';

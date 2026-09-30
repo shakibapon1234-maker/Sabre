@@ -73,6 +73,8 @@
   }
   .win-controls span:hover{background:#e4e4e4;}
   .win-controls .close-c:hover{background:var(--active-tab);color:#fff;}
+  /* Electron already provides the real Windows title bar. */
+  body.electron-app .os-titlebar{display:none;}
 
   /* ===== Menu bar ===== */
   .menu-bar{
