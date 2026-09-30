@@ -1763,6 +1763,7 @@ function sbParse(raw) {
   const cmd = raw.trim();
   if (!cmd) return;
   const upper = cmd.toUpperCase();
+  if (upper === 'LOADREISSUE') return sbLoadReissuePracticePNR();
 
   // ── Journey Record (JR) — PDF: JR  JR.JED/S-OYBOM15MAY... ─────────────
   // JR0N (e.g. JR01, JR02, JR03) - Hold itinerary option from FareShop

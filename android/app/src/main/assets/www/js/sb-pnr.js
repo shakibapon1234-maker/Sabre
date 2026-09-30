@@ -112,6 +112,29 @@ function sbLoadLessonPNR() {
   sbSyncSidePanel();
 }
 
+function sbLoadReissuePracticePNR() {
+  sbState = sbEmptyState();
+  sbState.locator = "R8SU26";
+  sbState.dateStamp = "01OCT26/0900Z";
+  sbState.names = [{ raw: "RAHMAN/ANIS MR", surname: "RAHMAN", first: "ANIS", title: "MR", paxType: "ADT" }];
+  sbState.booked = [{ al: "BG", fn: "555", cls: "Y", date: "25DEC", dep: "DAC", arr: "SIN", status: "HK1", depT: "1659", arrT: "2059", eq: "739", day: "5" }];
+  sbState.phones = [{ raw: "DAC 01700000000-A" }];
+  sbState.receivedFrom = "SHAKIB";
+  sbState.ticketingArrangement = "TAW-20DEC/";
+  sbState.fareQuote = { base: 34230, tax: 6500, total: 40730, currency: "BDT", pax: 1, breakdown: [{ index: 1, type: "ADT", base: 34230, tax: 6500, total: 40730 }] };
+  sbState.privateFare = { carrier: "BG", carrierName: "BIMAN BANGLADESH", baseBdt: 34230, tax: 6500, total: 40730, fareBasis: "YEE1M" };
+  sbState.ticketed = true;
+  sbState.invoiced = true;
+  sbState.eticketNumber = "618-9281928391";
+  sbState.ticketNumbers = ["6189281928391"];
+  sbState.ended = true;
+  if (typeof sbPnrStorePut === "function") sbPnrStorePut(sbState);
+  sbEcho("LOADREISSUE");
+  sbPrint("REISSUE PRACTICE PNR LOADED - TICKET 6189281928391");
+  sbPrint(sbRenderPNR());
+  sbSyncSidePanel();
+}
+
 /* ---------------------------------------------------------------------
    TERMINAL I/O HELPERS
 --------------------------------------------------------------------- */
