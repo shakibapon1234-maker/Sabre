@@ -358,19 +358,31 @@ function _sbRenderBfmResultsInContainer(container, org, dst, date1, dst2, date2,
     let grandTotal = 0;
     const paxBreakdown = psgrList.map(p => {
       let single = opt.fare;
+      let displayType = p.type;
       const t = p.type;
       if (t === 'INF') {
         // Infant is ~15.5% of adult total fare (e.g. 5251 on 33865 adult fare in Sabre CERT)
         single = Math.round(opt.fare * 0.155);
-      } else if (t === 'CNN' || t === 'CHD' || /^C\d{2}$/.test(t)) {
+      } else if (/^C\d{2}$/.test(t)) {
+        const age = parseInt(t.slice(1), 10);
+        if (age >= 2 && age <= 11) {
+          single = Math.round(opt.fare * 0.75);
+          displayType = t;
+        } else {
+          // If age >= 12 (e.g. C23 in live Sabre), Sabre automatically treats them as ADT (Adult)
+          single = opt.fare;
+          displayType = 'ADT';
+        }
+      } else if (t === 'CNN' || t === 'CHD') {
         // Child is 75% of adult fare
         single = Math.round(opt.fare * 0.75);
       } else {
         single = opt.fare;
+        displayType = 'ADT';
       }
       const lineTotal = single * p.count;
       grandTotal += lineTotal;
-      return { count: p.count, type: p.type, single, lineTotal };
+      return { count: p.count, type: displayType, single, lineTotal };
     });
 
     opt.grandTotal = grandTotal;
