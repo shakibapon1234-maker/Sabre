@@ -199,7 +199,22 @@ function sbHandleJrSubmit() {
   const date2    = (document.getElementById('jrDate2')?.value      || '').trim().toUpperCase();
   const cxrRaw   = (document.getElementById('jrCxr1')?.value       || '').replace(/[\/\s]/g, '').toUpperCase();
   const carrier  = cxrRaw || '';
-  const psgrRaw  = (document.getElementById('jrPsgr1')?.value      || '1ADT').trim().toUpperCase();
+  // Collect all passenger inputs from the 4 boxes: jrPsgr1, jrPsgr2, jrPsgr3, jrPsgr4
+  const psgrList = [];
+  ['jrPsgr1', 'jrPsgr2', 'jrPsgr3', 'jrPsgr4'].forEach(id => {
+    const val = (document.getElementById(id)?.value || '').trim().toUpperCase();
+    if (val) {
+      const m = val.match(/^(\d+)?([A-Z0-9]+)$/);
+      if (m) {
+        const count = m[1] ? parseInt(m[1], 10) : 1;
+        const type = m[2];
+        psgrList.push({ raw: val, count, type });
+      }
+    }
+  });
+  if (psgrList.length === 0) {
+    psgrList.push({ raw: '1ADT', count: 1, type: 'ADT' });
+  }
 
   // IMPORTANT: DO NOT REMOVE THE MASK!
   // In Live Sabre, the mask remains in place with all typed inputs!
@@ -224,7 +239,7 @@ function sbHandleJrSubmit() {
   resArea.innerHTML = '';
 
   const isRT = Boolean(dst2 && dst2 !== '');
-  _sbRenderBfmResultsInContainer(resArea, origin, dst1, date1, dst2, date2, carrier, psgrRaw, isRT);
+  _sbRenderBfmResultsInContainer(resArea, origin, dst1, date1, dst2, date2, carrier, psgrList, isRT);
 
   // SCROLL IMMEDIATELY SO ITINERARY OPTION 1 IS AT THE TOP OF THE SCREEN!
   // Exactly matching Live Sabre screenshot media_1790726488183.png
@@ -238,7 +253,7 @@ function sbHandleJrSubmit() {
 }
 
 /* ── BFM results renderer matching Screenshot (media_1790726488183.png) ── */
-function _sbRenderBfmResultsInContainer(container, org, dst, date1, dst2, date2, reqCxr, psgrRaw, isRT) {
+function _sbRenderBfmResultsInContainer(container, org, dst, date1, dst2, date2, reqCxr, psgrList, isRT) {
   const months = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
   const dayLetters = ['S','M','T','W','Q','F','S']; // Sunday=S, Monday=M, Tue=T, Wed=W, Thu=Q, Fri=F, Sat=S
 
@@ -255,8 +270,16 @@ function _sbRenderBfmResultsInContainer(container, org, dst, date1, dst2, date2,
   const d1 = parseDate(date1);
   const d2 = date2 ? parseDate(date2) : new Date(d1.getTime() + 24*3600*1000);
 
-  const paxCount = parseInt((psgrRaw.match(/\d+/) || ['1'])[0], 10) || 1;
-  const paxType  = psgrRaw.replace(/\d/g, '') || 'ADT';
+  // If psgrList was passed as string (fallback)
+  if (!Array.isArray(psgrList)) {
+    const raw = String(psgrList || '1ADT');
+    const cnt = parseInt((raw.match(/\d+/) || ['1'])[0], 10) || 1;
+    const typ = raw.replace(/\d/g, '') || 'ADT';
+    psgrList = [{ raw, count: cnt, type: typ }];
+  }
+
+  // Calculate total seated passengers (adults + children; infants sit on lap with no seat)
+  const seatCount = psgrList.filter(p => p.type !== 'INF').reduce((sum, p) => sum + p.count, 0) || 1;
 
   const preferredCarriers = reqCxr ? [reqCxr] : ['AI', 'AI', 'BS', 'SQ', 'BG', 'MH'];
 
@@ -318,7 +341,7 @@ function _sbRenderBfmResultsInContainer(container, org, dst, date1, dst2, date2,
   let outHtml = '';
 
   sampleOptions.forEach((opt, idx) => {
-    outHtml += `<div class="jr-opt-block" onclick="sbSellBfmOption(${idx + 1}, ${paxCount})" style="margin-bottom: 16px; cursor: pointer;">`;
+    outHtml += `<div class="jr-opt-block" onclick="sbSellBfmOption(${idx + 1}, ${seatCount})" style="margin-bottom: 16px; cursor: pointer;">`;
     outHtml += `<div class="jr-opt-title" style="font-weight: 700; color: #ffffff; margin-bottom: 3px; font-size: 14px;">ITINERARY OPTION ${idx + 1}</div>`;
 
     opt.legs.forEach(leg => {
@@ -331,13 +354,43 @@ function _sbRenderBfmResultsInContainer(container, org, dst, date1, dst2, date2,
         `</div>`;
     });
 
-    const singleFare = opt.fare;
-    const totalFare = singleFare * paxCount;
-    outHtml += `<div class="jr-fare-line" style="margin-top: 2px; font-family: inherit; font-size: 13.5px; line-height: 1.5; color: #cfd6e0; white-space: pre;">` +
-      `    ${paxCount}${paxType.padEnd(4)}  ${String(singleFare).padEnd(9)} ${totalFare}\n` +
-      ` TOTAL FARE - BDT    ${totalFare}\n\n` +
+    // Calculate fare for every passenger type (ADT, CNN/CHD, INF) matching Sabre CERT screenshot
+    let grandTotal = 0;
+    const paxBreakdown = psgrList.map(p => {
+      let single = opt.fare;
+      const t = p.type;
+      if (t === 'INF') {
+        // Infant is ~15.5% of adult total fare (e.g. 5251 on 33865 adult fare in Sabre CERT)
+        single = Math.round(opt.fare * 0.155);
+      } else if (t === 'CNN' || t === 'CHD' || /^C\d{2}$/.test(t)) {
+        // Child is 75% of adult fare
+        single = Math.round(opt.fare * 0.75);
+      } else {
+        single = opt.fare;
+      }
+      const lineTotal = single * p.count;
+      grandTotal += lineTotal;
+      return { count: p.count, type: p.type, single, lineTotal };
+    });
+
+    opt.grandTotal = grandTotal;
+    opt.paxBreakdown = paxBreakdown;
+    opt.seatCount = seatCount;
+
+    // Render each passenger type row exactly as in Sabre screenshot media_1790760827328.png
+    paxBreakdown.forEach(pb => {
+      const paxLabel = (pb.count + pb.type).padEnd(5);
+      const singleStr = String(pb.single).padStart(5);
+      const lineTotalStr = String(pb.lineTotal).padStart(9);
+      outHtml += `<div class="jr-fare-line" style="font-family: inherit; font-size: 13.5px; line-height: 1.5; color: #cfd6e0; white-space: pre;">` +
+        `    ${paxLabel} ${singleStr}   ${lineTotalStr}` +
+        `</div>`;
+    });
+
+    outHtml += `<div class="jr-fare-line" style="font-family: inherit; font-size: 13.5px; line-height: 1.5; color: #cfd6e0; white-space: pre;">` +
+      ` TOTAL FARE - BDT    ${grandTotal}\n\n` +
       `FORM OF PAYMENT FEES PER TICKET MAY APPLY\n` +
-      ` ${paxType.toUpperCase()} - MAXIMUM AMOUNT PER PASSENGER -        0` +
+      ` ADT - MAXIMUM AMOUNT PER PASSENGER -        0` +
       `</div>`;
 
     outHtml += `</div>`;
@@ -450,12 +503,23 @@ function sbSellBfmOption(optIndex, qty) {
   // Store fare quote in sbState
   if (typeof sbBuildFareQuote === 'function' && typeof sbGetFareForCarrier === 'function') {
     const f = sbGetFareForCarrier(opt.carrier || opt.legs[0].al);
-    f.total = opt.fare;
-    f.baseBdt = Math.round(opt.fare * 0.85);
-    f.tax = opt.fare - f.baseBdt;
+    const finalTotal = opt.grandTotal || opt.fare;
+    f.total = finalTotal;
+    f.baseBdt = Math.round(finalTotal * 0.85);
+    f.tax = finalTotal - f.baseBdt;
     sbState.privateFare = f;
     sbState.pqPriced = true;
     sbState.fareQuote = sbBuildFareQuote(f);
+    if (opt.paxBreakdown) {
+      sbState.fareQuote.breakdown = opt.paxBreakdown.map((pb, i) => ({
+        index: i + 1,
+        type: pb.type,
+        count: pb.count,
+        base: Math.round(pb.lineTotal * 0.85),
+        tax: pb.lineTotal - Math.round(pb.lineTotal * 0.85),
+        total: pb.lineTotal
+      }));
+    }
   }
 
   if (typeof sbSyncSidePanel === 'function') sbSyncSidePanel();
