@@ -347,44 +347,97 @@ function _sbRenderBfmResultsInContainer(container, org, dst, date1, dst2, date2,
 }
 
 /* ── Sell / Hold Segment from BFM / FareShop (0J1, 01J1, 02J1) ── */
-function sbSellBfmOption(optIndex, qty = 1) {
+function sbSellBfmOption(optIndex, qty) {
+  if (qty === undefined) qty = 1;
   const options = window._sbBfmOptions || (typeof sbState !== 'undefined' ? sbState._bfmOptions : null);
   if (!options || !options[optIndex - 1]) {
-    if (typeof sbWarn === 'function') sbWarn(`NO AVAIL.`);
+    if (typeof sbWarn === 'function') sbWarn('NO ITINERARY OPTIONS AVAILABLE - RUN FARESHOP/JR FIRST');
     return false;
   }
 
   const opt = options[optIndex - 1];
   if (typeof sbState === 'undefined') return false;
 
-  sbPrint('BOOKING STATUS: SEGMENTS ADDED TO PNR', 'sb-booking-status');
+  const months = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
 
-  opt.legs.forEach(leg => {
+  // ── 1. Print fare pricing details (matching original app JR03 output) ──────
+  const org  = opt.legs[0].org;
+  const dst  = opt.legs[opt.legs.length - 1].dst;
+  const cls  = opt.legs[0].cls;
+  const date = opt.legs[0].dtStr || opt.legs[0].d &&
+    (String(opt.legs[0].d.getDate()).padStart(2,'0') + ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'][opt.legs[0].d.getMonth()])
+    || '30DEC';
+  const al   = opt.carrier || opt.legs[0].al;
+
+  const totalBdt  = opt.fare;
+  const usdFare   = Math.round(totalBdt / 123.65 * 100) / 100;
+  const equivBdt  = Math.round(usdFare * 123.65);
+  const taxBD     = 500;
+  const taxUT     = 4000;
+  const taxXT     = totalBdt - equivBdt - taxBD - taxUT;
+  const fareBasis = cls + 'BDSGO';
+
+  sbPrint(`PSGR TYPE  ADT - 01`);
+  sbPrint(`      CXR RES DATE  FARE BASIS        NVB    NVA    BG`);
+  sbPrint(` ${org}`);
+  sbPrint(` ${dst} ${al}  ${cls}   ${date} ${fareBasis.padEnd(18)} ${date} ${date} 30K`);
+  sbPrint(`FARE  USD   ${String(usdFare.toFixed(2)).padStart(6)} EQUIV BDT    ${String(equivBdt).padStart(7)}`);
+  sbPrint(`TAX   BDT    ${String(taxBD).padStart(5)}BD BDT   ${String(taxUT).padStart(6)}UT BDT   ${String(Math.max(taxXT,0)).padStart(7)}XT`);
+  sbPrint(`TOTAL BDT  ${totalBdt}`);
+  sbPrint(`ADT-01  ${fareBasis}`);
+  sbPrint(` ${org} ${al} ${dst}${usdFare.toFixed(2)}NUC${usdFare.toFixed(2)}END ROE1.00`);
+  sbPrint(`XT BDT25000W BDT447E5 BDT371YQ BDT1237P8 BDT1237P7`);
+  sbPrint(`ENDOS*SEG${sbState.booked.length + opt.legs.length}*VALID ON ${al} ONLY/NON-ENDORSABLE/REFUND/MODIFICATION`);
+  sbPrint(`ENDOS*SUBJECT TO/PENALTIES`);
+  const tktDate = (function() {
+    const d = new Date(); d.setDate(d.getDate() + 3);
+    const dd = String(d.getDate()).padStart(2,'0');
+    const mm = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'][d.getMonth()];
+    const yy = String(d.getFullYear()).slice(2);
+    return `${dd}${mm}${yy}`;
+  })();
+  sbPrint(`TKT/TL${tktDate}/2359`);
+  sbPrint(`RATE USED 1USD-123.65BDT`);
+  sbPrint(`ATTN*VALIDATING CARRIER - ${al}`);
+  sbPrint(`ATTN*BAGGAGE INFO AVAILABLE - SEE WP*BAG`);
+
+  // ── 2. Add new legs to sbState.booked ────────────────────────────────────
+  opt.legs.forEach(function(leg) {
     sbState.booked.push({
       al: leg.al,
       fn: leg.fn,
       cls: leg.cls,
-      date: leg.dtStr,
+      date: leg.dtStr || date,
       dep: leg.org,
       arr: leg.dst,
-      status: `SS${qty}`,
+      status: 'SS1',
       depT: leg.dt,
       arrT: leg.at,
       eq: leg.eq,
-      day: leg.dayLet,
+      day: leg.dayLet || 'W',
       dayOver: 0
     });
-
-    const s = sbState.booked[sbState.booked.length - 1];
-    sbPrint(` ${sbState.booked.length} ${s.al.padEnd(5)} ${s.fn.padEnd(4)} ${s.cls.padEnd(2)} ${s.date} ${s.day.padEnd(3)}  ${s.dep.padEnd(4)} ${s.arr.padEnd(4)} ${s.status.padEnd(4)} ${s.depT}  ${s.arrT}`);
   });
 
-  // Store fare quote in sbState
+  // ── 3. Print full itinerary (existing UC1 + new SS1 segments) ─────────────
+  sbState.booked.forEach(function(s, i) {
+    const segNum = i + 1;
+    const status = s.status;
+    const dayOver = s.dayOver || 0;
+    const dayOverStr = dayOver > 0 ? '  ' + dayOver : '   ';
+    if (s.al === 'ARNK') {
+      sbPrint(` ${segNum}    ARNK`);
+    } else {
+      sbPrint(` ${segNum} ${s.al} ${String(s.fn).padStart(4)}${s.cls} ${s.date} ${(s.day||'').padEnd(2)} ${s.dep.padEnd(4)} ${s.arr.padEnd(4)} ${status.padEnd(4)} ${s.depT}  ${s.arrT}${dayOver>0?' '+dayOverStr:''} /${s.al === 'BS' ? 'DCBS' : 'DCAI'}`);
+    }
+  });
+
+  // ── 4. Store fare quote in sbState ────────────────────────────────────────
   if (typeof sbBuildFareQuote === 'function' && typeof sbGetFareForCarrier === 'function') {
-    const f = sbGetFareForCarrier(opt.carrier || 'AI');
+    const f = sbGetFareForCarrier(al);
     f.total = opt.fare;
-    f.baseBdt = Math.round(opt.fare * 0.85);
-    f.tax = opt.fare - f.baseBdt;
+    f.baseBdt = equivBdt;
+    f.tax = totalBdt - equivBdt;
     sbState.privateFare = f;
     sbState.pqPriced = true;
     sbState.fareQuote = sbBuildFareQuote(f);
