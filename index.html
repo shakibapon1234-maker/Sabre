@@ -840,7 +840,7 @@
       <input type="text" id="cmdInput" placeholder="TYPE COMMAND HERE" autocomplete="off">
     </div>
     <button class="cmd-icon-btn" title="Expand">⤢</button>
-    <button class="cmd-text-btn" type="button" onclick="document.getElementById('cmdInput').value=''; if(typeof sbCloseJrMask==='function') sbCloseJrMask();">Clear</button>
+    <button class="cmd-text-btn" type="button" onclick="sbClearTerminal()" title="Clear Terminal (Alt+Backspace)">Clear</button>
     <button class="cmd-text-btn" type="button" onclick="if(typeof sbCloseJrMask==='function') sbCloseJrMask();">Esc</button>
     <button class="send-btn" onclick="sendCmd()">Send</button>
     <button class="pill-btn" id="historyBtn" title="History">↺</button>

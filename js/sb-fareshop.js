@@ -148,7 +148,7 @@ function cmdFareShopJR() {
 
   term.appendChild(wrap);
 
-  // Position at top of view
+  // Position mask at top of view initially
   if (typeof sbScrollToCommand === 'function') {
     sbScrollToCommand(wrap);
   } else {
@@ -203,7 +203,6 @@ function sbHandleJrSubmit() {
 
   // IMPORTANT: DO NOT REMOVE THE MASK!
   // In Live Sabre, the mask remains in place with all typed inputs!
-  // Set action back to 'P' or leave as typed
   const actInp = document.getElementById('jrAction');
   if (actInp && !actInp.value) actInp.value = 'P';
 
@@ -227,14 +226,21 @@ function sbHandleJrSubmit() {
   const isRT = Boolean(dst2 && dst2 !== '');
   _sbRenderBfmResultsInContainer(resArea, origin, dst1, date1, dst2, date2, carrier, psgrRaw, isRT);
 
-  // Scroll to show results starting right under the mask
-  resArea.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  // SCROLL IMMEDIATELY SO ITINERARY OPTION 1 IS AT THE TOP OF THE SCREEN!
+  // Exactly matching Live Sabre screenshot media_1790726488183.png
+  setTimeout(() => {
+    if (typeof sbScrollToCommand === 'function') {
+      sbScrollToCommand(resArea);
+    } else {
+      resArea.scrollIntoView({ block: 'start', behavior: 'smooth' });
+    }
+  }, 10);
 }
 
-/* ── BFM results renderer matching Screenshot 2 (media_1790723135216.png) ── */
+/* ── BFM results renderer matching Screenshot (media_1790726488183.png) ── */
 function _sbRenderBfmResultsInContainer(container, org, dst, date1, dst2, date2, reqCxr, psgrRaw, isRT) {
   const months = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
-  const dayLetters = ['U','M','T','W','Q','F','S']; // Sun=U, Mon=M, Tue=T, Wed=W, Thu=Q, Fri=F, Sat=S
+  const dayLetters = ['S','M','T','W','Q','F','S']; // Sunday=S, Monday=M, Tue=T, Wed=W, Thu=Q, Fri=F, Sat=S
 
   function parseDate(str) {
     if (!str || str.length < 5) return new Date();
@@ -252,63 +258,62 @@ function _sbRenderBfmResultsInContainer(container, org, dst, date1, dst2, date2,
   const paxCount = parseInt((psgrRaw.match(/\d+/) || ['1'])[0], 10) || 1;
   const paxType  = psgrRaw.replace(/\d/g, '') || 'ADT';
 
-  // Determine carriers list
-  const preferredCarriers = reqCxr ? [reqCxr] : ['AI', 'SQ', 'BG', 'MH'];
+  const preferredCarriers = reqCxr ? [reqCxr] : ['AI', 'AI', 'BS', 'SQ', 'BG', 'MH'];
 
-  // Realistic options data
   const sampleOptions = [
     {
       carrier: preferredCarriers[0] || 'AI',
       legs: isRT ? [
-        { seg: 1, al: preferredCarriers[0] || 'AI', fn: '238', cls: 'T', d: d1, org: org, dst: 'DEL', dt: '1510', at: '1730', eq: '320', stops: 0 },
-        { seg: 1, al: preferredCarriers[0] || 'AI', fn: '2115', cls: 'T', d: new Date(d1.getTime() + 24*3600*1000), org: 'DEL', dst: dst, dt: '0340', at: '1210', eq: '321', stops: 0 },
-        { seg: 2, al: preferredCarriers[0] || 'AI', fn: '2108', cls: 'T', d: d2, org: dst, dst: 'BOM', dt: '1940', at: '2325', eq: '321', stops: 0 },
-        { seg: 2, al: preferredCarriers[0] || 'AI', fn: '2183', cls: 'Q', d: new Date(d2.getTime() + 24*3600*1000), org: 'BOM', dst: dst2 || org, dt: '0720', at: '1045', eq: '32N', stops: 0 }
+        { seg: 1, al: 'AI', fn: '238', cls: 'S', d: d1, org: org, dst: 'DEL', dt: '1510', at: '1730', eq: '320', stops: 0 },
+        { seg: 1, al: 'AI', fn: '2115', cls: 'S', d: new Date(d1.getTime() + 24*3600*1000), org: 'DEL', dst: dst, dt: '0340', at: '1210', eq: '321', stops: 0 },
+        { seg: 2, al: 'AI', fn: '2108', cls: 'S', d: d2, org: dst, dst: 'BOM', dt: '1940', at: '2325', eq: '321', stops: 0 },
+        { seg: 2, al: 'AI', fn: '2183', cls: 'Q', d: new Date(d2.getTime() + 24*3600*1000), org: 'BOM', dst: dst2 || org, dt: '0720', at: '1045', eq: '32N', stops: 0 }
       ] : [
-        { seg: 1, al: preferredCarriers[0] || 'AI', fn: '238', cls: 'T', d: d1, org: org, dst: 'DEL', dt: '1510', at: '1730', eq: '320', stops: 0 },
-        { seg: 1, al: preferredCarriers[0] || 'AI', fn: '2115', cls: 'T', d: new Date(d1.getTime() + 24*3600*1000), org: 'DEL', dst: dst, dt: '0340', at: '1210', eq: '321', stops: 0 }
+        { seg: 1, al: 'AI', fn: '238', cls: 'S', d: d1, org: org, dst: 'DEL', dt: '1510', at: '1730', eq: '320', stops: 0 },
+        { seg: 1, al: 'AI', fn: '2115', cls: 'S', d: new Date(d1.getTime() + 24*3600*1000), org: 'DEL', dst: dst, dt: '0340', at: '1210', eq: '321', stops: 0 }
       ],
-      fare: 51187
+      fare: 28018
     },
     {
-      carrier: preferredCarriers[1] || 'SQ',
+      carrier: 'AI',
       legs: isRT ? [
-        { seg: 1, al: preferredCarriers[1] || 'SQ', fn: '447', cls: 'V', d: d1, org: org, dst: dst, dt: '2355', at: '0605', eq: '78X', stops: 0 },
-        { seg: 2, al: preferredCarriers[1] || 'SQ', fn: '446', cls: 'V', d: d2, org: dst, dst: dst2 || org, dt: '2035', at: '2240', eq: '78X', stops: 0 }
+        { seg: 1, al: 'AI', fn: '238', cls: 'S', d: d1, org: org, dst: 'DEL', dt: '1510', at: '1730', eq: '320', stops: 0 },
+        { seg: 1, al: 'AI', fn: '2380', cls: 'S', d: d1, org: 'DEL', dst: dst, dt: '2235', at: '0700', eq: '321', stops: 0 },
+        { seg: 2, al: 'AI', fn: '2383', cls: 'S', d: d2, org: dst, dst: 'DEL', dt: '2300', at: '0230', eq: '321', stops: 0 },
+        { seg: 2, al: 'AI', fn: '227', cls: 'Q', d: new Date(d2.getTime() + 24*3600*1000), org: 'DEL', dst: dst2 || org, dt: '1110', at: '1410', eq: '320', stops: 0 }
       ] : [
-        { seg: 1, al: preferredCarriers[1] || 'SQ', fn: '447', cls: 'V', d: d1, org: org, dst: dst, dt: '2355', at: '0605', eq: '78X', stops: 0 }
+        { seg: 1, al: 'AI', fn: '238', cls: 'S', d: d1, org: org, dst: 'DEL', dt: '1510', at: '1730', eq: '320', stops: 0 },
+        { seg: 1, al: 'AI', fn: '2380', cls: 'S', d: d1, org: 'DEL', dst: dst, dt: '2235', at: '0700', eq: '321', stops: 0 }
       ],
-      fare: 58950
+      fare: 28018
     },
     {
-      carrier: preferredCarriers[2] || 'BG',
+      carrier: 'BS',
       legs: isRT ? [
-        { seg: 1, al: preferredCarriers[2] || 'BG', fn: '584', cls: 'L', d: d1, org: org, dst: dst, dt: '0825', at: '1440', eq: '788', stops: 0 },
-        { seg: 2, al: preferredCarriers[2] || 'BG', fn: '585', cls: 'L', d: d2, org: dst, dst: dst2 || org, dt: '1550', at: '1800', eq: '788', stops: 0 }
+        { seg: 1, al: 'BS', fn: '307', cls: 'S', d: d1, org: org, dst: dst, dt: '2215', at: '0430', eq: '738', stops: 0 },
+        { seg: 2, al: 'BS', fn: '308', cls: 'S', d: d2, org: dst, dst: dst2 || org, dt: '0530', at: '0745', eq: '738', stops: 0 }
       ] : [
-        { seg: 1, al: preferredCarriers[2] || 'BG', fn: '584', cls: 'L', d: d1, org: org, dst: dst, dt: '0825', at: '1440', eq: '788', stops: 0 }
+        { seg: 1, al: 'BS', fn: '307', cls: 'S', d: d1, org: org, dst: dst, dt: '2215', at: '0430', eq: '738', stops: 0 }
       ],
-      fare: 43250
+      fare: 33044
     },
     {
-      carrier: preferredCarriers[3] || 'MH',
+      carrier: 'SQ',
       legs: isRT ? [
-        { seg: 1, al: preferredCarriers[3] || 'MH', fn: '197', cls: 'S', d: d1, org: org, dst: 'KUL', dt: '1210', at: '1800', eq: '738', stops: 0 },
-        { seg: 1, al: preferredCarriers[3] || 'MH', fn: '609', cls: 'S', d: d1, org: 'KUL', dst: dst, dt: '2000', at: '2110', eq: '738', stops: 0 },
-        { seg: 2, al: preferredCarriers[3] || 'MH', fn: '610', cls: 'S', d: d2, org: dst, dst: 'KUL', dt: '1400', at: '1510', eq: '738', stops: 0 },
-        { seg: 2, al: preferredCarriers[3] || 'MH', fn: '196', cls: 'S', d: d2, org: 'KUL', dst: dst2 || org, dt: '1900', at: '2055', eq: '738', stops: 0 }
+        { seg: 1, al: 'SQ', fn: '447', cls: 'V', d: d1, org: org, dst: dst, dt: '2355', at: '0605', eq: '78X', stops: 0 },
+        { seg: 2, al: 'SQ', fn: '446', cls: 'V', d: d2, org: dst, dst: dst2 || org, dt: '2035', at: '2240', eq: '78X', stops: 0 }
       ] : [
-        { seg: 1, al: preferredCarriers[3] || 'MH', fn: '197', cls: 'S', d: d1, org: org, dst: dst, dt: '1210', at: '1800', eq: '738', stops: 0 }
+        { seg: 1, al: 'SQ', fn: '447', cls: 'V', d: d1, org: org, dst: dst, dt: '2355', at: '0605', eq: '78X', stops: 0 }
       ],
-      fare: 46800
+      fare: 46250
     }
   ];
 
   let outHtml = '';
 
   sampleOptions.forEach((opt, idx) => {
-    outHtml += `<div class="jr-opt-block" style="margin-bottom: 14px;">`;
-    outHtml += `<div class="jr-opt-title" style="font-weight: 700; color: #ffffff; margin-bottom: 2px;">ITINERARY OPTION ${idx + 1}</div>`;
+    outHtml += `<div class="jr-opt-block" style="margin-bottom: 16px;">`;
+    outHtml += `<div class="jr-opt-title" style="font-weight: 700; color: #ffffff; margin-bottom: 3px; font-size: 14px;">ITINERARY OPTION ${idx + 1}</div>`;
 
     opt.legs.forEach(leg => {
       const dtStr = String(leg.d.getDate()).padStart(2, '0') + months[leg.d.getMonth()];

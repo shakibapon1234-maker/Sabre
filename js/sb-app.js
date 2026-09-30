@@ -1,3 +1,16 @@
+function sbClearTerminal() {
+  const term = document.getElementById('termArea');
+  if (term) {
+    term.innerHTML = '<span class="ph">— কমান্ড টাইপ করে Send চাপুন —</span>';
+  }
+  const cmdInput = document.getElementById('cmdInput');
+  if (cmdInput) {
+    cmdInput.value = '';
+    cmdInput.focus();
+  }
+}
+window.sbClearTerminal = sbClearTerminal;
+
 /* =========================================================================
    SABRE TRAINING SIMULATOR — UI INIT / SHELL WIRING
    Independent educational tool — no affiliation with Sabre Corporation.
