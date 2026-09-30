@@ -375,18 +375,31 @@ function cmdAvailability(raw) {
    • 02J1  → Sell 2 seats from ITINERARY OPTION 1
    • 0J2   → Sell 1 seat from ITINERARY OPTION 2
 --------------------------------------------------------------------- */
+/* ---------------------------------------------------------------------
+   Sell from FareShop / Bargain Finder (BFM / JR / WPNI) — Sabre Standard:
+   • 0J1 / 0J2  → Rejects with ¥FORMAT¥ (seat count mandatory in Sabre)
+   • 01J1       → Sell 1 seat from ITINERARY OPTION 1
+   • 02J1       → Sell 2 seats from ITINERARY OPTION 1
+   • 01J2       → Sell 1 seat from ITINERARY OPTION 2
+--------------------------------------------------------------------- */
 function cmdSellBfm(raw) {
-  const m = raw.match(/^0(\d+)?J(\d+)$/i);
-  if (!m) {
-    sbWarn('FORMAT: 0J<OPTION> or 0<SEATS>J<OPTION>  e.g. 0J1 or 01J1');
+  const upper = raw.trim().toUpperCase();
+  // In Sabre, typing 0J1 or 0J2 without seat count returns ¥FORMAT¥
+  if (/^0J\d+$/i.test(upper)) {
+    sbWarn('¥FORMAT¥');
     return false;
   }
-  const qty = m[1] ? parseInt(m[1], 10) : 1;
+  const m = upper.match(/^0(\d+)J(\d+)$/i);
+  if (!m) {
+    sbWarn('¥FORMAT¥');
+    return false;
+  }
+  const qty = parseInt(m[1], 10);
   const optNum = parseInt(m[2], 10);
   if (typeof sbSellBfmOption === 'function') {
     return sbSellBfmOption(optNum, qty);
   }
-  sbWarn('FARESHOP NOT ACTIVE. RUN JR FIRST');
+  sbWarn('NO AVAIL.');
   return false;
 }
 

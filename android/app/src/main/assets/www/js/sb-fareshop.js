@@ -319,7 +319,7 @@ function _sbRenderBfmResultsInContainer(container, org, dst, date1, dst2, date2,
 
   sampleOptions.forEach((opt, idx) => {
     outHtml += `<div class="jr-opt-block" onclick="sbSellBfmOption(${idx + 1}, ${paxCount})" style="margin-bottom: 16px; cursor: pointer;" title="Click to hold/sell Option ${idx + 1} (Command: 0J${idx + 1} or 0${paxCount}J${idx + 1})">`;
-    outHtml += `<div class="jr-opt-title" style="font-weight: 700; color: #ffffff; margin-bottom: 3px; font-size: 14px;">ITINERARY OPTION ${idx + 1} <span style="font-size: 11px; font-weight: normal; color: #0d9488; margin-left: 10px;">[0J${idx + 1} TO HOLD]</span></div>`;
+    outHtml += `<div class="jr-opt-title" style="font-weight: 700; color: #ffffff; margin-bottom: 3px; font-size: 14px;">ITINERARY OPTION ${idx + 1} <span style="font-size: 11px; font-weight: normal; color: #0d9488; margin-left: 10px;">[01J${idx + 1} TO HOLD]</span></div>`;
 
     opt.legs.forEach(leg => {
       const dtStr = String(leg.d.getDate()).padStart(2, '0') + months[leg.d.getMonth()];
@@ -350,7 +350,7 @@ function _sbRenderBfmResultsInContainer(container, org, dst, date1, dst2, date2,
 function sbSellBfmOption(optIndex, qty = 1) {
   const options = window._sbBfmOptions || (typeof sbState !== 'undefined' ? sbState._bfmOptions : null);
   if (!options || !options[optIndex - 1]) {
-    if (typeof sbWarn === 'function') sbWarn(`NO FARESHOP OPTION ${optIndex} FOUND. RUN JR FIRST`);
+    if (typeof sbWarn === 'function') sbWarn(`NO AVAIL.`);
     return false;
   }
 
