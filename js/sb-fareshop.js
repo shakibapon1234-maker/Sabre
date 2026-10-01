@@ -174,12 +174,12 @@ function cmdFareShopJR() {
 }
 
 /* ── close mask ──────────────────────────────────────────────────── */
-function sbCloseJrMask() {
+function sbCloseJrMask(options = {}) {
   const mask = document.getElementById('sbJrMask');
   if (mask) mask.remove();
   const results = document.getElementById('sbJrResults');
   if (results) results.remove();
-  if (typeof sbPrint === 'function') sbPrint('JR MASK CANCELLED');
+  if (!options.silent && typeof sbPrint === 'function') sbPrint('JR MASK CANCELLED');
 }
 
 /* ── submit handler ──────────────────────────────────────────────── */

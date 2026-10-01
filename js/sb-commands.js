@@ -1637,6 +1637,10 @@ function cmdRedisplay() {
 }
 
 function cmdIgnore() {
+  // Ignore must also dismiss any interactive FareShop work area.  Leaving its
+  // markup behind makes the next JR/FARESHOP command focus the stale mask
+  // instead of opening a fresh one.
+  if (typeof sbCloseJrMask === 'function') sbCloseJrMask({ silent: true });
   sbState = sbEmptyState();
   sbPrint('OK');
   sbSyncSidePanel();
