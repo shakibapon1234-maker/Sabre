@@ -21,6 +21,7 @@
         "files": [
             "index.html",
             "main.js",
+        "images/**/*",
             "js/**/*"
         ],
         "win": {

@@ -25,6 +25,13 @@ function createWindow() {
 
   mainWindow.loadFile("index.html");
 
+  // The simulator provides its own Sabre-style menu.  Avoid duplicating it
+  // with Electron's native menu and reclaim vertical workspace space.
+  mainWindow.setMenuBarVisibility(false);
+  mainWindow.webContents.on("did-finish-load", () => {
+    mainWindow.webContents.executeJavaScript("document.body.classList.add('electron-app')");
+  });
+
   mainWindow.once("ready-to-show", () => {
     mainWindow.show();
     mainWindow.maximize();
@@ -115,8 +122,7 @@ function createWindow() {
     }
   ];
 
-  const menu = Menu.buildFromTemplate(menuTemplate);
-  Menu.setApplicationMenu(menu);
+  Menu.setApplicationMenu(null);
 
   mainWindow.on("closed", () => { mainWindow = null; });
 }

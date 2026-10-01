@@ -796,6 +796,53 @@
     line-height: 1.45;
   }
 
+
+  /* Prominent Ticket Fare Row & Real-time Hide */
+  .ticket-fare-row {
+    background: #f0fdf4 !important;
+    border: 1.5px solid #86efac !important;
+    padding: 10px 14px !important;
+    border-radius: 8px !important;
+    margin: 8px 0 !important;
+    align-items: center !important;
+    box-shadow: 0 1px 4px rgba(22, 163, 74, 0.12) !important;
+  }
+  .ticket-fare-row .detail-label {
+    color: #166534 !important;
+    font-weight: 700 !important;
+    font-size: 14px !important;
+  }
+  .ticket-fare-row .detail-value {
+    color: #15803d !important;
+    font-size: 16px !important;
+    font-weight: 800 !important;
+    letter-spacing: 0.5px !important;
+  }
+  .hide-fare-active .ticket-fare-row,
+  .hide-fare-on-print .ticket-fare-row {
+    display: none !important;
+  }
+
+  /* ===== Electronic ticket receipt ===== */
+  .ticket-modal-backdrop { position:fixed; inset:0; z-index:10000; display:none; align-items:center; justify-content:center; padding:24px; background:rgba(9,15,25,.68); overflow:auto; }
+  .ticket-modal-backdrop.show { display:flex; }
+  .ticket-modal-card { width:min(780px,100%); max-height:calc(100vh - 48px); overflow:auto; background:#fff; color:#172033; border-radius:10px; box-shadow:0 22px 60px rgba(0,0,0,.45); }
+  .ticket-modal-logo-header { display:flex; align-items:center; gap:14px; padding:16px 22px; border-bottom:2px solid #c8472f; }
+  .ticket-modal-logo { display:block; width:74px; height:52px; object-fit:contain; flex:0 0 auto; }
+  .ticket-modal-brand { display:grid; gap:3px; }
+  .ticket-brand-name { color:#c8472f; font-size:18px; font-weight:800; letter-spacing:.4px; }
+  .ticket-brand-sub { color:#64748b; font-size:12px; }
+  .ticket-modal-title { margin:0; padding:16px 22px 8px; color:#172033; font-size:19px; }
+  .ticket-modal-body { padding:8px 22px 18px; }
+  .ticket-detail-row { display:flex; justify-content:space-between; gap:18px; padding:8px 0; border-bottom:1px solid #e5e7eb; }
+  .detail-label { color:#475569; font-weight:700; }.detail-value { color:#172033; text-align:right; }
+  .ticket-itinerary h4 { margin:20px 0 8px; color:#172033; }.ticket-itinerary-table { width:100%; border-collapse:collapse; font-size:12px; }
+  .ticket-itinerary-table th,.ticket-itinerary-table td { padding:7px; border:1px solid #dbe2ea; text-align:left; }.ticket-itinerary-table th { background:#f1f5f9; color:#334155; }
+  .ticket-modal-footer { display:flex; flex-wrap:wrap; justify-content:space-between; gap:12px; align-items:center; padding:14px 22px; border-top:1px solid #e5e7eb; }.ticket-modal-actions { display:flex; gap:8px; }
+  .ticket-modal-footer .btn { border:0; border-radius:5px; padding:9px 14px; font-weight:700; cursor:pointer; }.ticket-modal-footer .btn-primary { background:#c8472f; color:#fff; }.ticket-modal-footer .btn-secondary { background:#e2e8f0; color:#172033; }.hide-fare-toggle { color:#475569; font-size:12px; }
+  @media print { body > :not(#ticketModalBackdrop) { display:none !important; }.ticket-modal-backdrop,.ticket-modal-backdrop.show { position:static; display:block; padding:0; background:#fff; overflow:visible; }.ticket-modal-card { width:100%; max-height:none; overflow:visible; border-radius:0; box-shadow:none; }.ticket-modal-footer { display:none; } }
+  @media (max-width:560px) { .ticket-modal-backdrop { padding:10px; align-items:flex-start; }.ticket-modal-logo-header,.ticket-modal-body,.ticket-modal-footer { padding-left:14px; padding-right:14px; }.ticket-detail-row { display:grid; gap:3px; }.detail-value { text-align:left; } }
+
 </style>
 </head>
 <body>
@@ -850,7 +897,7 @@
     <button class="pill-btn" onclick="sbOpenPfKeys()">⌨ PF Keys</button>
     <button class="pill-btn" onclick="sbOpenCommandHelper()">🪄 Command Helper</button>
   </div><!-- Function key quick row -->
-  <div class="fkey-bar" id="fkeyBar"><div class="fkey-more" onclick="sbOpenPfKeys()">⋮</div></div>
+  <div class="fkey-bar" id="fkeyBar" hidden></div>
 
   <!-- PF Keys modal -->
   <div id="sbPfModal" style="display:none;">
@@ -1035,6 +1082,7 @@
 <script src="js/sb-pnr.js"></script>
 <script src="js/sb-commands.js"></script>
 <script src="js/sb-dob-prompt.js"></script>
+<script src="js/ticket-modal.js"></script>
 <script src="js/sb-app.js"></script>
 <script src="js/sb-pfkeys.js"></script>
 <script src="js/sb-fareshop.js"></script>
@@ -1045,6 +1093,86 @@
   });
 </script>
 
+
+
+<!-- Ticket Modal (GDS Training Hub Official Branding) -->
+<div class="ticket-modal-backdrop" id="ticketModalBackdrop" onclick="if(event.target===this) closeTicketModal()">
+  <div class="ticket-modal-card" id="ticketModalCard">
+    <!-- Ticket Modal Logo Header (GDS Training Hub Official Branding) -->
+    <div class="ticket-modal-logo-header">
+      <img src="images/gds-training-hub-logo.jpg" alt="GDS Training Hub Logo" class="ticket-modal-logo" onerror="this.src='images/logo.png'">
+      <div class="ticket-modal-brand">
+        <span class="ticket-brand-name">GDS TRAINING HUB</span>
+        <span class="ticket-brand-sub">Aviation GDS Simulator Software &bull; gdstraininghub.com</span>
+      </div>
+    </div>
+    <h3 class="ticket-modal-title">&#9992;&#65039; Electronic Ticket Receipt</h3>
+    <div class="ticket-modal-body">
+      <div class="ticket-detail-row">
+        <span class="detail-label">Passenger Name:</span>
+        <span class="detail-value" id="tktModalPax">MR MD JHONY</span>
+      </div>
+      <div class="ticket-detail-row">
+        <span class="detail-label">Ticket Number:</span>
+        <span class="detail-value" id="tktModalNumber">157-7800396554421</span>
+      </div>
+      <div class="ticket-detail-row" id="tktModalPNRRow">
+        <span class="detail-label">GDS PNR:</span>
+        <span class="detail-value" id="tktModalPNR" style="font-weight:700;color:#1e40af;">&#8212;</span>
+      </div>
+      <div class="ticket-detail-row" id="tktModalAirlinePNRRow" style="display:none;">
+        <span class="detail-label">Airline PNR / Ref:</span>
+        <span class="detail-value" id="tktModalAirlinePNR" style="font-weight:700;color:#1e40af;"></span>
+      </div>
+      <div class="ticket-detail-row" id="tktModalOrigRow" style="display:none;">
+        <span class="detail-label">Original Ticket:</span>
+        <span class="detail-value" id="tktModalOrig"></span>
+      </div>
+      <div class="ticket-detail-row ticket-fare-row">
+        <span class="detail-label">Total Fare:</span>
+        <span class="detail-value" id="tktModalFare">BDT 30000</span>
+      </div>
+      <div class="ticket-detail-row">
+        <span class="detail-label">Form of Payment:</span>
+        <span class="detail-value" id="tktModalFOP">CASH</span>
+      </div>
+      <div class="ticket-detail-row">
+        <span class="detail-label">Ticket Status:</span>
+        <span class="detail-value" id="tktModalStatus" style="font-weight:700;color:#16a34a;">OPEN</span>
+      </div>
+      <div class="ticket-detail-row">
+        <span class="detail-label">Route:</span>
+        <span class="detail-value" id="tktModalRoute">&#8212;</span>
+      </div>
+      <div class="ticket-detail-row">
+        <span class="detail-label">Flight Number:</span>
+        <span class="detail-value" id="tktModalFlight">555</span>
+      </div>
+      <div class="ticket-detail-row">
+        <span class="detail-label">Departure Date:</span>
+        <span class="detail-value" id="tktModalDate">2026-07-25</span>
+      </div>
+      <div class="ticket-detail-row">
+        <span class="detail-label">Destination:</span>
+        <span class="detail-value" id="tktModalDest">Singapore Changi Airport</span>
+      </div>
+      <section class="ticket-itinerary" aria-label="Flight itinerary">
+        <h4>Flight Itinerary</h4>
+        <div id="tktModalItinerary"></div>
+      </section>
+    </div>
+    <div class="ticket-modal-footer">
+      <div class="ticket-modal-actions">
+        <button type="button" class="btn btn-primary" onclick="printTicketReceipt()">&#128438; Print Ticket Receipt</button>
+        <button type="button" class="btn btn-secondary" onclick="closeTicketModal()">Close</button>
+      </div>
+      <label class="hide-fare-toggle">
+        <input type="checkbox" id="hideFareCheckbox">
+        <span>Hide fare details in print</span>
+      </label>
+    </div>
+  </div>
+</div>
 
 </body>
 </html>

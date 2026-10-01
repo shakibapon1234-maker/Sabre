@@ -1025,6 +1025,7 @@ function cmdClone(raw) {
 
   sbPrint(exceptIdx >= 0 ? `ITINERARY CLONED EXCEPT SEGMENT ${exceptMatch[1]}` : 'ITINERARY CLONED TO WORK AREA');
   sbPrint(sbRenderPNR());
+  sbPrintTicketReceiptButton(sbState.eticketNumber);
   sbSyncSidePanel();
 }
 
@@ -1247,6 +1248,7 @@ function cmdDisplayTicket() {
   tickets.forEach((ticketNo, index) => {
     const pax = sbState.names[index]?.surname || sbState.names[index]?.raw || 'PASSENGER';
     const type = sbPaxLabel(sbState.names[index]);
+    sbPrintTicketReceiptButton(ticketNo);
     sbPrint(` ${index + 2}.TE ${ticketNo}-BD ${pax} ${type} ${sbState.officeId}*ATW ${sbSabreFooterStamp()}*I`);
   });
 }
@@ -1635,6 +1637,10 @@ function cmdRedisplay() {
 }
 
 function cmdIgnore() {
+  // Ignore must also dismiss any interactive FareShop work area.  Leaving its
+  // markup behind makes the next JR/FARESHOP command focus the stale mask
+  // instead of opening a fresh one.
+  if (typeof sbCloseJrMask === 'function') sbCloseJrMask({ silent: true });
   sbState = sbEmptyState();
   sbPrint('OK');
   sbSyncSidePanel();
@@ -1761,6 +1767,7 @@ function sbParse(raw) {
   const cmd = raw.trim();
   if (!cmd) return;
   const upper = cmd.toUpperCase();
+  if (upper === 'LOADREISSUE') return sbLoadReissuePracticePNR();
 
   // ── Journey Record (JR) — PDF: JR  JR.JED/S-OYBOM15MAY... ─────────────
   // JR0N (e.g. JR01, JR02, JR03) - Hold itinerary option from FareShop
@@ -1929,5 +1936,64 @@ function sendCmd() {
 
   if (echo && typeof sbScrollToCommand === 'function') {
     sbScrollToCommand(echo);
+  }
+}
+
+
+// Ticket Receipt Modal Bridge for Sabre
+function openSabreTicketModal(ticketNumber) {
+  const tktNo = ticketNumber || sbState.eticketNumber || (sbState.ticketNumbers && sbState.ticketNumbers[0]) || '618-9281928391';
+  const paxName = (sbState.names[0] && (sbState.names[0].raw || sbState.names[0].surname)) || 'PASSENGER';
+  const fq = sbState.fareQuote || { total: 44892 };
+  const fareStr = 'BDT ' + (fq.total ? fq.total.toLocaleString() : '44,892');
+  const segs = sbState.booked || [];
+  const firstSeg = segs[0] || {};
+  const flt = (firstSeg.al || 'MH') + ' ' + (firstSeg.flt || '197');
+  const depDate = firstSeg.date || '25JUL';
+  const dest = firstSeg.arr || 'KUL';
+  
+  const mappedSegs = segs.map(s => ({
+    carrier: s.al,
+    flightNumber: s.flt,
+    bookingClass: s.cls || 'Y',
+    date: s.date,
+    origin: s.dep,
+    destination: s.arr,
+    depart: s.depTime || '12:00',
+    arrive: s.arrTime || '16:00',
+    status: 'HK1 (CONFIRMED)'
+  }));
+
+  openTicketModal(
+    paxName,
+    tktNo,
+    fareStr,
+    flt,
+    depDate,
+    dest,
+    null,
+    mappedSegs,
+    {
+      locator: sbState.locator || 'SB' + Math.floor(1000 + Math.random()*9000),
+      airlinePnr: (sbState.booked[0] && sbState.booked[0].airlineLocator) || (sbState.locator ? sbState.locator : '1B89XY'),
+      fop: 'CASH',
+      status: 'OK'
+    }
+  );
+}
+
+function sbPrintTicketReceiptButton(ticketNo) {
+  const term = document.getElementById('termArea');
+  if (!term) return;
+  const wrap = document.createElement('div');
+  wrap.style.margin = '8px 0';
+  const btn = document.createElement('button');
+  btn.className = 'print-ticket-btn';
+  btn.innerHTML = '&#128438; Print Electronic Ticket Receipt (' + (ticketNo || 'TKT') + ')';
+  btn.onclick = function() { openSabreTicketModal(ticketNo); };
+  wrap.appendChild(btn);
+  term.appendChild(wrap);
+  if (!window._sbSuppressScrollToBottom) {
+    term.scrollTop = term.scrollHeight;
   }
 }
